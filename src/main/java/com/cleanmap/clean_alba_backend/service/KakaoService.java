@@ -31,8 +31,8 @@ public class KakaoService {
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type","authorization_code");
-        params.add("clientId",clientId);
-        params.add("redirect_url",redirectUri);
+        params.add("client_id",clientId);
+        params.add("redirect_uri",redirectUri);
         params.add("code",code);
 
         HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest = new HttpEntity<>(params, headers);
@@ -51,7 +51,7 @@ public class KakaoService {
         RestTemplate rt = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add("Authoorization","Bearer"+accessToken);
+        headers.add("Authorization","Bearer " + accessToken);
         headers.add("Content-type","application/x-www-form-urlencoded;charset=utf-8");
 
         HttpEntity<MultiValueMap<String, String>> kakaoProfileRequest = new HttpEntity<>(headers);

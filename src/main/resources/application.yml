@@ -3,4 +3,4 @@ spring:
     name: clean_alba_backend
 kakao:
   client-id: "fedb5f9d642224f6cd5c42bc29ba0f84"
-  redirect-url: "http//localhost:5173/api/kakao/callback"
+  redirect-url: "http//gigitlocalhost:5173/api/kakao/callback"
