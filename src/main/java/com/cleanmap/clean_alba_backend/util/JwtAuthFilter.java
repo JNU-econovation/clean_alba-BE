@@ -35,8 +35,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (jwtBlacklistUtill.isBlacklisted(token)){
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); //401
                 response.getWriter().write("로그아웃된 토큰입니다. 다시 로그인해주세요.");
-                return; //요청을 여기에서 막음
+                return; //요청을 여기에서 막음 (void여서 값반환 용도가 아닌 메서드 강제 종료용도)
             }
         }
+        //블랙리스트가 아니면 컨트롤러로 요청 통과
+        filterChain.doFilter(request, response);
     }
 }

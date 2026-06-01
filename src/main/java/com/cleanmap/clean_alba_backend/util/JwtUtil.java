@@ -2,6 +2,7 @@ package com.cleanmap.clean_alba_backend.util;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SecureRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,16 +29,35 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
+    // application.yml의 admin.emails 값 받음
+    @Value("${admin.ids}")
+    private String adminIds;
+
     // JWT 토큰을 발급하는 메서드
     // email을 토큰 안에 담아두면, 나중에 토큰만 보고도 누구인지 알 수 있음
     // KakaoController에서 호출됨
-    public String generateToken(String email) {
+    public String generateToken(String email, Long kakaoId) {
+
+        // 관지자 이메일 목록에 있으면 ADMIN, 없으면 USER
+        String role = adminIds.contains(String.valueOf(kakaoId)) ? "ADMIN" : "USER";
+
         return Jwts.builder()
                 .subject(email)                                                   // 토큰 주인 (이메일) - 나중에 꺼내서 누구인지 확인하는 용도
+                .claim("role",role)
                 .issuedAt(new Date())                                             // 발급 시각
                 .expiration(new Date(System.currentTimeMillis() + expirationMs)) // 만료 시각
                 .signWith(secretKey)                                              // 비밀 키로 서명 -> 토큰의 위조됐는지 검증용
                 .compact();                                                       // 문자열 형태로 변환
+    }
+
+    //토큰에서 role을 꺼냄
+    public String getRoleFromToken(String token){
+        return (String) Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role"); // claim에서 role 꺼내기
     }
 
     // 토큰에서 이메일을 꺼내는 메서드 (로그아웃 시 누구인지 확인용)
