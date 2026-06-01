@@ -18,5 +18,6 @@ public class KakaoLoginResponse {
     private String token;     // 우리 서비스가 발급한 JWT (프론트가 이후 API 요청 시 사용)
     private String userEmail; // 카카오에서 받아온 이메일
     private String nickname;  // 카카오에서 받아온 닉네임
+    private String role;      // 관리자 식별
 
 }

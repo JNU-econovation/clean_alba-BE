@@ -57,6 +57,7 @@ public class KakaoController {
         //        카카오 토큰은 프론트에 주지 않고, 우리가 만든 JWT만 전달함
         //        → JwtUtil.generateToken() 호출 (util/JwtUtil.java)
         Long kakaoId = kakaoRawInfo.getId();
+        System.out.println("카카오 고유 ID: " + kakaoId);
         String jwtToken = jwtUtil.generateToken(email, kakaoId);
 
         // 5단계: 프론트에게 돌려줄 응답 객체를 만들어서 값을 담음
@@ -65,10 +66,11 @@ public class KakaoController {
         finalResponse.setToken(jwtToken);       // 우리 서비스 JWT
         finalResponse.setUserEmail(email);      // 카카오 이메일
         finalResponse.setNickname(nickname);    // 카카오 닉네임
+        finalResponse.setRole(jwtUtil.getRoleFromToken(jwtToken)); // 관리자 식별용
 
         System.out.println("백엔드에서 재포장 완료: " + finalResponse.getNickname());
 
-        // 관리자의 카카오 고유 id확인용
+        // 관리자의 카카오 고유 id 확인용
         System.out.println("카카오 고유 id: " + kakaoRawInfo.getId());
 
         // 최종 응답: { "token": "eyJ...", "userEmail": "...", "nickname": "..." }
