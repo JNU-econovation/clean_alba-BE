@@ -3,12 +3,11 @@ package com.cleanmap.clean_alba_backend.controller;
 import com.cleanmap.clean_alba_backend.dto.KakaoLoginResponse;
 import com.cleanmap.clean_alba_backend.dto.KakaoUserInfoDto;
 import com.cleanmap.clean_alba_backend.service.KakaoService;
+import com.cleanmap.clean_alba_backend.util.JwtBlacklistUtill;
 import com.cleanmap.clean_alba_backend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 // @RestController: 이 클래스가 API 요청을 받는 컨트롤러임을 선언
 // @RequestMapping: 이 컨트롤러의 모든 API 주소는 /api/kakao 로 시작
@@ -27,6 +26,13 @@ public class KakaoController {
     // GET /api/kakao/callback?code=xxxx 요청을 처리하는 메서드
     // 카카오 로그인 후 카카오가 프론트에 인가 코드를 주면,
     // 프론트가 그 코드를 들고 이 API를 호출함
+    // [전체 흐름]
+    // 프론트(5173)에서 카카오 로그인 버튼 클릭
+    // -> 카카오 로그인 페이지 이동
+    // -> 사용자가 카카오 로그인 이동
+    // -> 카카오가 프론트의 redirect-url로 인가 코드를 보냄
+    // -> 프론트가 그 인가 코드를 꺼내서 이 api(/api/kakao/callback?code=xxx)를 호출
+    // -> 백엔드가 카카오와 통신해서 jwt(토큰)를 만들어 프론트에 반환
     @GetMapping("/callback")
     public KakaoLoginResponse kakaoCallback(@RequestParam("code") String code) {
         System.out.println("카카오가 보내준 인가 코드: " + code);
@@ -60,5 +66,30 @@ public class KakaoController {
 
         // 최종 응답: { "token": "eyJ...", "userEmail": "...", "nickname": "..." }
         return finalResponse;
+    }
+
+    // JwtBlacklistUtil도 주입받아야 하니까 필드에 추가
+    private final JwtBlacklistUtill jwtBlacklistUtill;
+
+    // POST /api/kakao/logout
+    // 프론트가 헤더에 "Authorization: Bearer eyJ..." 형태로 JWT를 담아서 요청
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(
+            @RequestHeader("Authorization") String authorizationHeader) {
+
+        // "Bearer eyJ..."에서 "Bearer " 부분을 잘라내고 토큰만 꺼냄
+        String token = authorizationHeader.replace("Bearer ","");
+
+        // 토큰이 유효한지 먼저 확인
+        if (!jwtUtil.validateToken(token)){
+            return ResponseEntity.badRequest().body("유효하지 않은 토큰입니다.");
+        }
+
+        // 블랙리스트에 추가 -> 이 토큰은 이제 못 씀
+        jwtBlacklistUtill.addToBlacklist(token);
+
+        System.out.println("로그아웃 완료: " + jwtUtil.getEmailFromToken(token));
+
+        return ResponseEntity.ok("로그아웃 되었습니다.");
     }
 }

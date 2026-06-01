@@ -33,10 +33,33 @@ public class JwtUtil {
     // KakaoController에서 호출됨
     public String generateToken(String email) {
         return Jwts.builder()
-                .subject(email)                                                   // 토큰 주인 (이메일)
+                .subject(email)                                                   // 토큰 주인 (이메일) - 나중에 꺼내서 누구인지 확인하는 용도
                 .issuedAt(new Date())                                             // 발급 시각
                 .expiration(new Date(System.currentTimeMillis() + expirationMs)) // 만료 시각
-                .signWith(secretKey)                                              // 비밀 키로 서명
+                .signWith(secretKey)                                              // 비밀 키로 서명 -> 토큰의 위조됐는지 검증용
                 .compact();                                                       // 문자열 형태로 변환
+    }
+
+    // 토큰에서 이메일을 꺼내는 메서드 (로그아웃 시 누구인지 확인용)
+    public String getEmailFromToken(String token){
+        return Jwts.parser()
+                .verifyWith(secretKey)    // 비밀키로 서명 검증
+                .build()
+                .parseSignedClaims(token) // 토큰 파싱
+                .getPayload()
+                .getSubject();            // subject에 넣었던 이메일 꺼내기
+    }
+
+    // 토큰이 유효한지 검사하는 메서드 (만료/위조 시 false)
+    public boolean validateToken(String token){
+        try {
+            Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token);
+            return true; // 문제없으면 유효
+        } catch (Exception e){
+            return false; // 만료/위조/형식오류면 무효
+        }
     }
 }

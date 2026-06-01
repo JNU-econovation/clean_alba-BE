@@ -77,13 +77,16 @@ public class KakaoService {
         // 바디 없이 헤더만 담아서 요청 객체 생성
         HttpEntity<MultiValueMap<String, String>> kakaoProfileRequest = new HttpEntity<>(headers);
 
+        // HttpEntity = 헤더 + 바디를 하나로 묶은 "택배 상자" 같은 것
+        // 카카오한테 보낼 요청 정보를 이 상자에 담아서 전달하는 것
+
         // 카카오 유저 정보 서버에 POST 요청 전송
         // 응답은 KakaoUserInfoDto 형태로 자동 변환됨 (dto/KakaoUserInfoDto.java)
         ResponseEntity<KakaoUserInfoDto> response = rt.exchange(
-                "https://kapi.kakao.com/v2/user/me",
-                HttpMethod.POST,
-                kakaoProfileRequest,
-                KakaoUserInfoDto.class
+                "https://kapi.kakao.com/v2/user/me", // 요청 보낼 카카오 서버 주소
+                HttpMethod.POST,                         // POST 방식으로 요청
+                kakaoProfileRequest,                     // 위에서 만든 요청 상자
+                KakaoUserInfoDto.class                   // 응답을 이 클래스 형태로 변환해서 받겠다.
         );
 
         return response.getBody();
