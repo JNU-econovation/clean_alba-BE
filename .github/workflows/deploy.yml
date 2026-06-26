@@ -1,0 +1,51 @@
+name: Deploy Spring Boot to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x ./gradlew
+
+      - name: Build Spring Boot jar
+        run: ./gradlew clean bootJar -x test
+
+      - name: Prepare deploy jar
+        run: |
+          JAR_FILE=$(ls build/libs/*.jar | grep -v plain | head -n 1)
+          cp "$JAR_FILE" clean_alba_backend-0.0.1-SNAPSHOT.jar
+          ls -lh clean_alba_backend-0.0.1-SNAPSHOT.jar
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy jar to EC2
+        run: |
+          scp -i ~/.ssh/ec2_key.pem clean_alba_backend-0.0.1-SNAPSHOT.jar \
+          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/clean_alba_backend-0.0.1-SNAPSHOT.jar
+
+      - name: Restart systemd service
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            sudo systemctl restart clean-alba-backend
+            sudo systemctl status clean-alba-backend --no-pager
+          EOF
