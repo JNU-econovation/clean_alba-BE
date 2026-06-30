@@ -4,7 +4,7 @@ import com.cleanmap.clean_alba_backend.domain.Workspace;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import java.math.BigDecimal;
 
-public record WorkspaceListResponse(
+public record WorkspaceSummaryResponse(
     Long workspaceId,
     String name,
     String address,
@@ -15,8 +15,8 @@ public record WorkspaceListResponse(
     Integer cleanScore,
     WorkspaceStatus status
 ) {
-    public static WorkspaceListResponse from(Workspace workspace) {
-        return new WorkspaceListResponse(
+    public static WorkspaceSummaryResponse from(Workspace workspace) {
+        return new WorkspaceSummaryResponse(
             workspace.getWorkspaceId(),
             workspace.getName(),
             workspace.getAddress(),

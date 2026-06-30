@@ -26,6 +26,12 @@ public class Workspace {
     @Column(nullable = false)
     private String address;
 
+    @Column(nullable = false)
+    private String category;
+
+    @Column(nullable = false)
+    private String district;
+
     @Column(nullable = false, precision = 10, scale = 7)
     private BigDecimal latitude;
 
@@ -38,7 +44,4 @@ public class Workspace {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private WorkspaceStatus status;
-
-    @Column(name = "access_password")
-    private String accessPassword;
 }
