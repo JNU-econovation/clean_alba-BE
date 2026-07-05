@@ -50,6 +50,18 @@ public class JwtUtil {
                 .compact();                                                       // 문자열 형태로 변환
     }
 
+    // 기존 토큰의 email·role을 그대로 유지한 채 만료시간만 새로 찍어 재발급 (슬라이딩 갱신)
+    // 토큰에 kakaoId가 없어 generateToken을 못 쓰므로, 이미 검증된 role을 넘겨받아 재발급한다.
+    public String reissueToken(String email, String role) {
+        return Jwts.builder()
+                .subject(email)
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(secretKey)
+                .compact();
+    }
+
     //토큰에서 role을 꺼냄
     public String getRoleFromToken(String token){
         return (String) Jwts.parser()

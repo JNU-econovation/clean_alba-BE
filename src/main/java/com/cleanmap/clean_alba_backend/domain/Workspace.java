@@ -38,10 +38,23 @@ public class Workspace {
     @Column(nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    @Column(nullable = false)
-    private Integer cleanScore;
+    // 승인된 리뷰들로부터 산출되는 값(소수 정밀). 리뷰가 없으면 null(지도·목록 미노출).
+    @Column
+    private Double cleanScore;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private WorkspaceStatus status;
+    // 사업장 등록용. cleanScore는 리뷰 승인 시 재계산되므로 초기값은 null이다.
+    public Workspace(String name, String address, String category, String district,
+                     BigDecimal latitude, BigDecimal longitude) {
+        this.name = name;
+        this.address = address;
+        this.category = category;
+        this.district = district;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    // 리뷰 승인/변경 시 재계산된 클린지수를 반영. null이면 산출 대상 리뷰 없음.
+    public void updateCleanScore(Double cleanScore) {
+        this.cleanScore = cleanScore;
+    }
 }

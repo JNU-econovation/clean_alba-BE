@@ -16,6 +16,9 @@ public record WorkspaceSummaryResponse(
     WorkspaceStatus status
 ) {
     public static WorkspaceSummaryResponse from(Workspace workspace) {
+        Double raw = workspace.getCleanScore();
+        Integer displayScore = (raw == null) ? null : (int) Math.round(raw);
+        WorkspaceStatus status = (displayScore == null) ? null : WorkspaceStatus.fromScore(displayScore);
         return new WorkspaceSummaryResponse(
             workspace.getWorkspaceId(),
             workspace.getName(),
@@ -24,8 +27,8 @@ public record WorkspaceSummaryResponse(
             workspace.getDistrict(),
             workspace.getLatitude(),
             workspace.getLongitude(),
-            workspace.getCleanScore(),
-            workspace.getStatus()
+            displayScore,
+            status
         );
     }
 }

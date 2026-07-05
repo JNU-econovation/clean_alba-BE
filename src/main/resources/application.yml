@@ -1,6 +1,10 @@
 spring:
   application:
     name: clean_alba_backend
+  jpa:
+    # data.sql이 Hibernate의 테이블 생성 이후 실행되도록 보장 (로컬 H2 임베디드 시드용).
+    # 운영 MySQL은 spring.sql.init.mode 기본값(embedded) 때문에 data.sql이 실행되지 않음.
+    defer-datasource-initialization: true
 kakao:
   client-id: "fedb5f9d642224f6cd5c42bc29ba0f84"        #카카오 디벨로퍼스에서 발급받은 rest api키
   client-secret: "gYJ2qGwzitLmo1jzRKHdf6bYd7IBdc28"    #카카오 디벨로퍼스 -> 내 앱 -> 보안 에서 발급받은 시크릿 키
@@ -12,3 +16,6 @@ jwt:
   expiration-ms: 86400000 # 토큰 유효시간
 admin:
   ids: "4924422709"
+upstage:
+  # 후기 순화(Solar) API 키. 코드에 하드코딩하지 않고 환경변수 UPSTAGE_API_KEY에서 읽는다.
+  api-key: "${UPSTAGE_API_KEY:}"
