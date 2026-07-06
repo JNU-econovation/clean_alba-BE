@@ -7,7 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 // @Component: 스프링이 이 클래스를 자동으로 관리하도록 등록
 //             KakaoController에서 JwtUtil을 주입받아 쓸 수 있는 이유
@@ -20,25 +23,30 @@ public class JwtUtil {
     // 토큰 만료 시간 (application.yml의 jwt.expiration-ms 값, 현재 86400000ms = 24시간)
     private final long expirationMs;
 
-    // 생성자: 애플리케이션 시작 시 application.yml에서 값을 읽어와 SecretKey 객체를 만들어둠
+    // application.yml의 admin.ids 값을 콤마로 분리해 담은 관리자 카카오 ID 집합 (정확 매칭용)
+    private final Set<String> adminIds;
+
+    // 생성자: 애플리케이션 시작 시 application.yml에서 값을 읽어와 SecretKey·관리자 ID 집합을 만들어둠
     public JwtUtil(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-ms}") long expirationMs
+            @Value("${jwt.expiration-ms}") long expirationMs,
+            @Value("${admin.ids}") String adminIds
     ) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes()); // 문자열 → 암호화 키 변환
         this.expirationMs = expirationMs;
+        // "id1, id2, id3" → 앞뒤 공백 제거 후 정확 매칭용 Set으로 변환
+        this.adminIds = Arrays.stream(adminIds.split(","))
+                .map(String::trim)
+                .filter(id -> !id.isEmpty())
+                .collect(Collectors.toSet());
     }
-
-    // application.yml의 admin.emails 값 받음
-    @Value("${admin.ids}")
-    private String adminIds;
 
     // JWT 토큰을 발급하는 메서드
     // email을 토큰 안에 담아두면, 나중에 토큰만 보고도 누구인지 알 수 있음
     // KakaoController에서 호출됨
     public String generateToken(String email, Long kakaoId) {
 
-        // 관지자 이메일 목록에 있으면 ADMIN, 없으면 USER
+        // 관리자 ID 목록에 정확히 일치하면 ADMIN, 없으면 USER
         String role = adminIds.contains(String.valueOf(kakaoId)) ? "ADMIN" : "USER";
 
         return Jwts.builder()
