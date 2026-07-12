@@ -52,6 +52,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || "POST".equals(method) && path.matches("/workspaces/[^/]+/reviews")
                 || "POST".equals(method) && path.matches("/workspaces/[^/]+/clean-score/recalculate")
                 || "POST".equals(method) && path.matches("/reviews/[^/]+/attachments")
+                || "POST".equals(method) && path.equals("/reviews/purify-preview")
                 || "POST".equals(method) && (path.equals("/auth/logout") || path.equals("/auth/refresh"))
                 || path.equals("/api/kakao/logout")
                 || path.equals("/api/kakao/me");

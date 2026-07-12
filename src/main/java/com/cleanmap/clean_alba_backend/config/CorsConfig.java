@@ -1,23 +1,40 @@
 package com.cleanmap.clean_alba_backend.config;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.core.Ordered;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
-// @Configuration: 스프링 설정 클래스임을 선언
-// WebMvcConfigurer: 스프링 MVC 설정을 커스텀할 수 있게 해주는 인터페이스
+import java.util.List;
+
+// CORS를 MVC(DispatcherServlet) 단계가 아니라 서블릿 필터 단계에서 처리한다.
+// JwtAuthFilter보다 먼저 실행되므로, 인증 실패(401/403)로 요청이 중단돼도 응답에 CORS 헤더가 붙어
+// 프론트엔드(vercel/localhost)가 상태 코드를 정상적으로 읽을 수 있다.
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")                          // 모든 API 경로에 적용
-                .allowedOrigins(
-                    "http://localhost:5173",
-                    "https://cleanalb-map-fe.vercel.app"     
-                )   
-                .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")  // 허용할 HTTP 메서드
-                .allowedHeaders("*")                        // 모든 헤더 허용
-                .allowCredentials(true);                    // 쿠키/인증 정보 포함 허용
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "https://cleanalb-map-fe.vercel.app"
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        FilterRegistrationBean<CorsFilter> registration =
+                new FilterRegistrationBean<>(new CorsFilter(source));
+        // JwtAuthFilter(기본 순서)보다 먼저 실행되어야 인증 실패 응답에도 CORS 헤더가 붙는다.
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.addUrlPatterns("/*");
+        return registration;
     }
 }
