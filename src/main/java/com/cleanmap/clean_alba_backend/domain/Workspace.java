@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * 지도에 표시되는 사업장 엔티티다.
+ * {@code cleanScore}는 직접 입력하지 않고 승인 리뷰들의 평균으로 갱신한다.
+ */
 @Entity
 @Table(
     name = "workspaces",

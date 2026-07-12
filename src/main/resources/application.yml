@@ -6,16 +6,17 @@ spring:
     # 운영 MySQL은 spring.sql.init.mode 기본값(embedded) 때문에 data.sql이 실행되지 않음.
     defer-datasource-initialization: true
 kakao:
-  client-id: "fedb5f9d642224f6cd5c42bc29ba0f84"        #카카오 디벨로퍼스에서 발급받은 rest api키
-  client-secret: "gYJ2qGwzitLmo1jzRKHdf6bYd7IBdc28"    #카카오 디벨로퍼스 -> 내 앱 -> 보안 에서 발급받은 시크릿 키
+  client-id: "${KAKAO_CLIENT_ID}"        #카카오 디벨로퍼스에서 발급받은 rest api키
+  client-secret: "${KAKAO_CLIENT_SECRET}"    #카카오 디벨로퍼스 -> 내 앱 -> 보안 에서 발급받은 시크릿 키
   redirect-url: "https://cleanalb-map-fe.vercel.app/kakao/auth-code"
   # 로그인 성공 후 카카오가 인가코드를 들고 돌아올 프론트 주소
 jwt:
-  secret: "clean-alba-secret-key-please-change-this-in-production-must-be-long"
+  secret: "${JWT_SECRET}"
     # jwt 서명에 사용하는 비밀 키, 절대 외부에 노출되면 안됨
-  expiration-ms: 86400000 # 토큰 유효시간
+  expiration-ms: 86400000 # 토큰 유효시간\
+
 admin:
-  ids: "4924422709, 4905062556, 4978533409"
+  ids: "${ADMIN_IDS}"
 upstage:
   # 후기 순화(Solar) API 키. 코드에 하드코딩하지 않고 환경변수 UPSTAGE_API_KEY에서 읽는다.
-  api-key: "${UPSTAGE_API_KEY:}"
+  api-key: "${UPSTAGE_API_KEY}"

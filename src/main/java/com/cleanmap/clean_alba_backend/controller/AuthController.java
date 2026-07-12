@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
+/** 기존 서비스 JWT의 신원을 유지하면서 만료 시각을 갱신하는 인증 API다. */
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 사업장 등록, 목록 검색, 상세 요약 HTTP API를 제공한다. */
 @RestController
 @RequestMapping("/workspaces")
 @RequiredArgsConstructor

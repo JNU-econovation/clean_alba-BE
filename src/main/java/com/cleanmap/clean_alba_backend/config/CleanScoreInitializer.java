@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 // 앱 기동 후(시드 데이터 로드 이후) 전체 사업장의 클린지수를 승인된 리뷰 기준으로 계산한다.
 // 하드코딩 없이 계산 로직으로 점수가 채워지도록 보장한다.
+/** 애플리케이션 시작이 끝나면 모든 사업장의 파생 클린지수를 다시 계산한다. */
 @Component
 @RequiredArgsConstructor
 public class CleanScoreInitializer implements ApplicationRunner {

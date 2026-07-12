@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** 후기 제출 전에 법적 위험 표현과 순화 후보를 미리 확인하는 API를 제공한다. */
 @RestController
 @RequestMapping("/reviews")
 @RequiredArgsConstructor

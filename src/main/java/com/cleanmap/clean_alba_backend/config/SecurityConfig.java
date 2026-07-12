@@ -6,6 +6,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/** 로그아웃된 JWT를 차단하는 필터를 {@code /api/*} 경로에 등록한다. */
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {

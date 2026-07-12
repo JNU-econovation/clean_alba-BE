@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "active_work_id": "review-moderation-core",
+  "works": {
+    "review-moderation-core": {
+      "work_id": "review-moderation-core",
+      "active_plan": ".omo/plans/review-moderation-core.md",
+      "plan_name": "review-moderation-core",
+      "session_ids": ["codex:root"],
+      "status": "active",
+      "worktree_path": null
+    }
+  }
+}

@@ -4,6 +4,7 @@ import com.cleanmap.clean_alba_backend.domain.Workspace;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import java.math.BigDecimal;
 
+/** 지도 목록에서 사업장 위치, 표시용 점수와 상태를 함께 전달하는 응답이다. */
 public record WorkspaceListResponse(
     Long workspaceId,
     String name,
@@ -15,6 +16,7 @@ public record WorkspaceListResponse(
     Integer cleanScore,
     WorkspaceStatus status
 ) {
+    /** 저장된 실수 평균을 화면 표시용 정수로 반올림한 뒤 상태 구간을 계산한다. */
     public static WorkspaceListResponse from(Workspace workspace) {
         Double raw = workspace.getCleanScore();
         Integer displayScore = (raw == null) ? null : (int) Math.round(raw);

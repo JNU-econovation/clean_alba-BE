@@ -7,8 +7,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
+/**
+ * 사업장 저장과 지도 목록 검색을 담당한다.
+ * 검색 결과는 클린지수가 있는 사업장만 포함하며 점수가 높은 순으로 정렬된다.
+ */
 public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
 
+    /** 상태의 점수 범위와 자유 검색어를 한 쿼리에서 선택적으로 적용한다. */
     @Query("""
             SELECT w FROM Workspace w
             WHERE w.cleanScore IS NOT NULL

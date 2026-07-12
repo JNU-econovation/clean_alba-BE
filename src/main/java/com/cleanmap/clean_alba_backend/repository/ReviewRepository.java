@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
+/** 리뷰 저장과 사업장별 승인 리뷰 조회를 담당한다. */
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // 클린지수 계산용: 특정 사업장의 승인된 리뷰만 조회

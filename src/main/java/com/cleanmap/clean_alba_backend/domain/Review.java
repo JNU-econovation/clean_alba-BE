@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 근무 경험과 8개 위반 여부를 기록하는 리뷰 엔티티다.
+ * 승인된 리뷰의 {@link #score()}만 사업장의 클린지수 계산에 사용된다.
+ */
 @Entity
 @Table(name = "reviews")
 @Getter
