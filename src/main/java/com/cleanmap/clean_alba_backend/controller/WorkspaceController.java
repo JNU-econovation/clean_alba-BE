@@ -3,6 +3,9 @@ package com.cleanmap.clean_alba_backend.controller;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceCreateRequest;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceListResponse;
+import com.cleanmap.clean_alba_backend.dto.WorkspacePlaceSearchResponse;
+import com.cleanmap.clean_alba_backend.dto.WorkspaceResolveRequest;
+import com.cleanmap.clean_alba_backend.dto.WorkspaceResolveResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceSummaryResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceDetailResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewCreateRequest;
@@ -50,6 +53,24 @@ public class WorkspaceController {
         @RequestParam(required = false) String keyword
     ) {
         return workspaceService.getWorkspaceList(status, keyword);
+    }
+
+    // GET /workspaces/place-search — 기존 사업장 + 카카오 신규 장소 통합 검색 (후기 장소 선택 페이지)
+    @GetMapping("/place-search")
+    public List<WorkspacePlaceSearchResponse> searchPlaces(
+        @RequestParam String keyword
+    ) {
+        return workspaceService.searchPlaces(keyword);
+    }
+
+    // POST /workspaces/resolve — 카카오 장소를 workspaceId로 변환 (중복 시 재사용). 로그인 필요.
+    @PostMapping("/resolve")
+    public WorkspaceResolveResponse resolve(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestBody WorkspaceResolveRequest request
+    ) {
+        authService.authenticate(authorizationHeader);
+        return workspaceService.resolveByKakao(request);
     }
 
     @GetMapping("/{workspaceId}/summary")

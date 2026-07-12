@@ -37,4 +37,7 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM Workspace w WHERE w.workspaceId = :workspaceId")
     Optional<Workspace> findByIdForUpdate(@Param("workspaceId") Long workspaceId);
+
+    // 카카오 장소 기반 중복확인용
+    Optional<Workspace> findByKakaoPlaceId(String kakaoPlaceId);
 }
