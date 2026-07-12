@@ -16,7 +16,7 @@ public class CorsConfig implements WebMvcConfigurer {
                     "http://localhost:5173",
                     "https://cleanalb-map-fe.vercel.app"     
                 )   
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")  // 허용할 HTTP 메서드
+                .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")  // 허용할 HTTP 메서드
                 .allowedHeaders("*")                        // 모든 헤더 허용
                 .allowCredentials(true);                    // 쿠키/인증 정보 포함 허용
     }

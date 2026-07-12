@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import com.cleanmap.clean_alba_backend.dto.ReviewCreateRequest;
 
 import java.time.LocalDateTime;
 
@@ -12,7 +13,14 @@ import java.time.LocalDateTime;
  * 승인된 리뷰의 {@link #score()}만 사업장의 클린지수 계산에 사용된다.
  */
 @Entity
-@Table(name = "reviews")
+@Table(
+        name = "reviews",
+        indexes = {
+                @Index(name = "idx_review_status_created", columnList = "status, created_at, review_id"),
+                @Index(name = "idx_review_workspace_status_created", columnList = "workspace_id, status, created_at, review_id"),
+                @Index(name = "idx_review_author_created", columnList = "author_email, created_at, review_id")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Review {
@@ -65,6 +73,31 @@ public class Review {
 
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public Review(Workspace workspace, ReviewCreateRequest request, String authorEmail) {
+        this.workspace = workspace;
+        this.contractViolation = request.contractViolation();
+        this.minimumWageViolation = request.minimumWageViolation();
+        this.weeklyAllowanceViolation = request.weeklyAllowanceViolation();
+        this.breakTimeViolation = request.breakTimeViolation();
+        this.wageDelayViolation = request.wageDelayViolation();
+        this.scheduleChangeViolation = request.scheduleChangeViolation();
+        this.substituteCoercionViolation = request.substituteCoercionViolation();
+        this.overtimePayViolation = request.overtimePayViolation();
+        this.coworkerCount = request.coworkerCount();
+        this.content = request.content() == null ? null : request.content().trim();
+        this.authorEmail = authorEmail;
+    }
+
+    public void moderate(ReviewStatus newStatus) {
+        if (status != ReviewStatus.PENDING) {
+            throw new IllegalStateException("이미 검수된 리뷰입니다.");
+        }
+        if (newStatus != ReviewStatus.APPROVED && newStatus != ReviewStatus.REJECTED) {
+            throw new IllegalArgumentException("승인 또는 반려 상태만 선택할 수 있습니다.");
+        }
+        status = newStatus;
+    }
 
     // 이 리뷰 1건의 점수: 100 - (위반 항목 수 × 12.5)
     public double score() {

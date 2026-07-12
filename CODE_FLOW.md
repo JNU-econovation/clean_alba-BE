@@ -47,31 +47,51 @@ WorkspaceController.getWorkspaceList
 
 ### 상세 요약: `GET /workspaces/{workspaceId}/summary`
 
-`WorkspaceService`가 ID로 사업장을 찾고, 없으면 404를 발생시킨다. 조회된 엔티티는 `WorkspaceSummaryResponse`로 변환된다.
+`WorkspaceService`가 ID로 사업장을 찾고, 승인된 후기 수와 8개 체크 항목의 준수/위반 통계를 함께 `WorkspaceSummaryResponse`로 변환한다. `GET /workspaces/{workspaceId}`는 같은 요약에 승인 후기 목록까지 포함한다.
 
 ### 사업장 등록: `POST /workspaces`
 
 컨트롤러가 Bearer JWT의 유효성과 `ADMIN` 역할을 확인한다. 서비스는 필수 입력을 검사하고 공백을 정리한 뒤 사업장을 저장한다. 새 사업장은 아직 리뷰가 없으므로 클린지수가 `null`이다.
 
+### 리뷰 작성과 첨부
+
+`POST /workspaces/{workspaceId}/reviews`는 JWT subject를 작성자로 사용하고 서버가 상태를 `PENDING`으로 고정한다. `POST /reviews/{reviewId}/attachments`는 작성자 또는 관리자만 호출할 수 있으며, 리뷰당 최대 5개의 10MB 이하 jpg/jpeg/png/pdf 파일을 확장자·MIME·파일 시그니처까지 확인한 뒤 저장한다. `GET /users/me/reviews`는 현재 JWT 작성자의 리뷰만 최신순으로 반환한다.
+
 ## 4. 카카오 로그인과 JWT 흐름
 
 ```text
 프론트엔드가 카카오에서 인가 코드 획득
-  -> GET /api/kakao/callback?code=...
+  -> POST /auth/kakao/callback { "code": "..." }
   -> KakaoService.getAccessToken: 인가 코드를 카카오 액세스 토큰으로 교환
   -> KakaoService.getUserInfo: 이메일·닉네임·카카오 ID 조회
-  -> JwtUtil.generateToken: 이메일(subject)과 역할(role)을 담은 서비스 JWT 발급
+  -> JwtUtil.generateToken: 이메일, 카카오 ID, 현재 역할, 고유 jti를 담은 서비스 JWT 발급
   -> KakaoLoginResponse 반환
 ```
 
+- 기존 `GET /api/kakao/callback` 경로도 호환을 위해 유지한다.
 - `GET /api/kakao/me`: JWT에서 이메일과 역할을 읽어 반환한다.
-- `POST /api/kakao/logout`: JWT를 메모리 블랙리스트에 넣는다.
-- `POST /auth/refresh`: 유효하고 블랙리스트에 없는 JWT의 이메일·역할을 유지해 새 JWT를 만든다.
-- `JwtAuthFilter`: `/api/*` 요청의 토큰이 블랙리스트에 있으면 컨트롤러 전에 401로 차단한다.
+- `POST /api/kakao/logout`, `POST /auth/logout`: JWT를 메모리 블랙리스트에 넣는다.
+- `POST /auth/refresh`: 현재 관리자 ID 설정으로 역할을 다시 계산한 새 `jti` 토큰을 만들고 이전 토큰을 폐기한다.
+- `JwtAuthFilter`: 모든 요청을 관찰하고 보호 경로의 인증·관리자 권한을 요청 본문 파싱 전에 검사한다.
 
-블랙리스트는 현재 프로세스 메모리에만 있으므로 서버 재시작 시 사라지고, 여러 서버 인스턴스 사이에 공유되지 않는다.
+블랙리스트는 현재 프로세스 메모리에만 있으므로 서버 재시작 시 사라지고, 여러 서버 인스턴스 사이에 공유되지 않는다. 배포 전에 발급되어 `kakaoId` claim이 없는 JWT는 갱신할 수 없으므로 사용자가 한 번 다시 로그인해야 한다.
 
-## 5. 후기 순화 흐름
+## 5. 관리자 검수 흐름
+
+```text
+GET /admin/reviews?status=pending
+  -> 최신순 검수 목록 조회
+GET /admin/reviews/{reviewId}
+  -> 작성자와 체크리스트를 포함한 상세 조회
+PATCH /admin/reviews/{reviewId}/status
+  -> 리뷰와 사업장을 순서대로 잠금
+  -> PENDING 상태만 APPROVED 또는 REJECTED로 1회 변경
+  -> APPROVED일 때만 승인 후기 평균으로 클린지수 갱신
+```
+
+`GET /admin/stats`는 전체·대기·승인·반려 후기 수와 사업장 수를 반환한다. `POST /workspaces/{workspaceId}/clean-score/recalculate`는 관리자만 수동 정합성 보정을 실행할 수 있다.
+
+## 6. 후기 순화 흐름
 
 ```text
 POST /reviews/purify-preview
@@ -85,10 +105,11 @@ POST /reviews/purify-preview
 
 Solar가 JSON을 마크다운 코드 펜스로 감싸는 경우 `stripCodeFence`가 펜스를 제거한다. 외부 API 호출 실패나 응답 파싱 실패는 502로 변환된다.
 
-## 6. 리뷰할 때 주의해서 볼 경계
+## 7. 리뷰할 때 주의해서 볼 경계
 
-- JWT 필터는 `/api/*`에만 등록되어 `/workspaces`와 `/auth`의 인증은 각 컨트롤러가 직접 처리한다.
+- JWT 필터는 보호 API의 인증을 본문·multipart 파싱보다 먼저 수행하고, 컨트롤러도 유스케이스 직전에 권한을 다시 확인한다.
 - `WorkspaceListResponse`와 `WorkspaceSummaryResponse`의 변환 로직은 동일하지만 서로 다른 API 계약을 독립적으로 표현한다.
 - 클린지수 검색은 `null` 점수 사업장을 제외하며, 상한은 미포함이다.
 - 후기 엔티티의 상태가 `APPROVED`인 경우만 클린지수 집계 대상이다.
+- 반려는 기존 클린지수를 변경하지 않으며, 승인과 점수 갱신은 같은 트랜잭션에서 처리한다.
 - 외부 API DTO의 `@JsonProperty`는 카카오의 snake_case 필드와 Java camelCase 필드를 연결한다.

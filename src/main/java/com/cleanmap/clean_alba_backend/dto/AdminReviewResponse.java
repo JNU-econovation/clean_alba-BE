@@ -1,0 +1,46 @@
+package com.cleanmap.clean_alba_backend.dto;
+
+import com.cleanmap.clean_alba_backend.domain.Review;
+import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
+
+import java.time.LocalDateTime;
+
+public record AdminReviewResponse(
+        Long reviewId,
+        Long workspaceId,
+        String workspaceName,
+        String authorEmail,
+        boolean contractViolation,
+        boolean minimumWageViolation,
+        boolean weeklyAllowanceViolation,
+        boolean breakTimeViolation,
+        boolean wageDelayViolation,
+        boolean scheduleChangeViolation,
+        boolean substituteCoercionViolation,
+        boolean overtimePayViolation,
+        Integer coworkerCount,
+        String content,
+        ReviewStatus status,
+        LocalDateTime createdAt
+) {
+    public static AdminReviewResponse from(Review review) {
+        return new AdminReviewResponse(
+                review.getReviewId(),
+                review.getWorkspace().getWorkspaceId(),
+                review.getWorkspace().getName(),
+                review.getAuthorEmail(),
+                review.isContractViolation(),
+                review.isMinimumWageViolation(),
+                review.isWeeklyAllowanceViolation(),
+                review.isBreakTimeViolation(),
+                review.isWageDelayViolation(),
+                review.isScheduleChangeViolation(),
+                review.isSubstituteCoercionViolation(),
+                review.isOvertimePayViolation(),
+                review.getCoworkerCount(),
+                review.getContent(),
+                review.getStatus(),
+                review.getCreatedAt()
+        );
+    }
+}

@@ -1,12 +1,14 @@
 package com.cleanmap.clean_alba_backend.controller;
 
-import com.cleanmap.clean_alba_backend.util.JwtBlacklistUtill;
-import com.cleanmap.clean_alba_backend.util.JwtUtil;
+import com.cleanmap.clean_alba_backend.dto.KakaoAuthCodeRequest;
+import com.cleanmap.clean_alba_backend.dto.KakaoLoginResponse;
+import com.cleanmap.clean_alba_backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
@@ -18,8 +20,20 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final JwtUtil jwtUtil;
-    private final JwtBlacklistUtill jwtBlacklistUtill;
+    private final AuthService authService;
+
+    @PostMapping("/kakao/callback")
+    public KakaoLoginResponse kakaoCallback(@RequestBody KakaoAuthCodeRequest request) {
+        return authService.kakaoLogin(request.code());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        authService.logout(authorizationHeader);
+        return ResponseEntity.ok("로그아웃 되었습니다.");
+    }
 
     // POST /auth/refresh
     // 아직 유효한 토큰을 헤더에 담아 보내면, 만료시간을 새로 찍은 토큰을 재발급(슬라이딩 갱신).
@@ -28,24 +42,8 @@ public class AuthController {
     public ResponseEntity<?> refresh(
             @RequestHeader("Authorization") String authorizationHeader) {
 
-        String token = authorizationHeader.replace("Bearer ", "");
-
-        // 로그아웃(블랙리스트)된 토큰은 갱신 불가
-        if (jwtBlacklistUtill.isBlacklisted(token)) {
-            return ResponseEntity.status(401).body("로그아웃된 토큰입니다. 다시 로그인해주세요.");
-        }
-
-        // 만료·위조된 토큰은 갱신 불가
-        if (!jwtUtil.validateToken(token)) {
-            return ResponseEntity.status(401).body("유효하지 않은 토큰입니다. 다시 로그인해주세요.");
-        }
-
-        String email = jwtUtil.getEmailFromToken(token);
-        String role = jwtUtil.getRoleFromToken(token);
-        String newToken = jwtUtil.reissueToken(email, role);
-
         Map<String, String> result = new HashMap<>();
-        result.put("token", newToken);
+        result.put("token", authService.refresh(authorizationHeader));
         return ResponseEntity.ok(result);
     }
 }

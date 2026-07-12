@@ -1,10 +1,12 @@
 package com.cleanmap.clean_alba_backend.util;
 
+import com.cleanmap.clean_alba_backend.service.AuthService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -16,8 +18,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jetUtil;
-    private final JwtBlacklistUtill jwtBlacklistUtill;
+    private final AuthService authService;
 
     @Override
     protected  void doFilterInternal(HttpServletRequest request,
@@ -25,20 +26,41 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                      FilterChain filterChain)
         throws ServletException, IOException{
 
-        String authHeader = request.getHeader("Authorization");
-
-        //Authorization 헤더가 있고 "Bearer "로 시작하는 경우에만 검사
-        if (authHeader != null && authHeader.startsWith("Bearer ")){
-            String token = authHeader.replace("Bearer ", "");
-
-            // 블랙리스트에 있으면 -> 401 반환하고 요청 차단
-            if (jwtBlacklistUtill.isBlacklisted(token)){
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); //401
-                response.getWriter().write("로그아웃된 토큰입니다. 다시 로그인해주세요.");
-                return; //요청을 여기에서 막음 (void여서 값반환 용도가 아닌 메서드 강제 종료용도)
+        if (!"OPTIONS".equals(request.getMethod()) && isProtected(request)) {
+            try {
+                if (requiresAdmin(request)) {
+                    authService.requireAdmin(request.getHeader("Authorization"));
+                } else {
+                    authService.authenticate(request.getHeader("Authorization"));
+                }
+            } catch (ResponseStatusException exception) {
+                response.setStatus(exception.getStatusCode().value());
+                response.setContentType("text/plain;charset=UTF-8");
+                response.getWriter().write(exception.getReason());
+                return;
             }
         }
-        //블랙리스트가 아니면 컨트롤러로 요청 통과
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isProtected(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        return path.startsWith("/admin/")
+                || path.startsWith("/users/")
+                || "POST".equals(method) && path.equals("/workspaces")
+                || "POST".equals(method) && path.matches("/workspaces/[^/]+/reviews")
+                || "POST".equals(method) && path.matches("/workspaces/[^/]+/clean-score/recalculate")
+                || "POST".equals(method) && path.matches("/reviews/[^/]+/attachments")
+                || "POST".equals(method) && (path.equals("/auth/logout") || path.equals("/auth/refresh"))
+                || path.equals("/api/kakao/logout")
+                || path.equals("/api/kakao/me");
+    }
+
+    private boolean requiresAdmin(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/admin/")
+                || "POST".equals(request.getMethod()) && path.equals("/workspaces")
+                || path.matches("/workspaces/[^/]+/clean-score/recalculate");
     }
 }

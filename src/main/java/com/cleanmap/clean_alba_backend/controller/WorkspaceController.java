@@ -4,8 +4,12 @@ import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceCreateRequest;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceListResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceSummaryResponse;
+import com.cleanmap.clean_alba_backend.dto.WorkspaceDetailResponse;
+import com.cleanmap.clean_alba_backend.dto.ReviewCreateRequest;
+import com.cleanmap.clean_alba_backend.dto.ReviewCreateResponse;
+import com.cleanmap.clean_alba_backend.service.AuthService;
+import com.cleanmap.clean_alba_backend.service.ReviewService;
 import com.cleanmap.clean_alba_backend.service.WorkspaceService;
-import com.cleanmap.clean_alba_backend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,23 +30,16 @@ import java.util.List;
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
-    private final JwtUtil jwtUtil;
+    private final ReviewService reviewService;
+    private final AuthService authService;
 
     // POST /workspaces — 신규 사업장 등록 (관리자 전용)
     @PostMapping
     public ResponseEntity<?> createWorkspace(
-        @RequestHeader("Authorization") String authorizationHeader,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @RequestBody WorkspaceCreateRequest request
     ) {
-        String token = authorizationHeader.replace("Bearer ", "");
-
-        if (!jwtUtil.validateToken(token)) {
-            return ResponseEntity.status(401).body("유효하지 않은 토큰입니다.");
-        }
-        if (!"ADMIN".equals(jwtUtil.getRoleFromToken(token))) {
-            return ResponseEntity.status(403).body("관리자만 사업장을 등록할 수 있습니다.");
-        }
-
+        authService.requireAdmin(authorizationHeader);
         WorkspaceSummaryResponse created = workspaceService.createWorkspace(request);
         return ResponseEntity.status(201).body(created);
     }
@@ -60,5 +57,29 @@ public class WorkspaceController {
         @PathVariable Long workspaceId
     ) {
         return workspaceService.getWorkspaceSummary(workspaceId);
+    }
+
+    @GetMapping("/{workspaceId}")
+    public WorkspaceDetailResponse getWorkspaceDetail(@PathVariable Long workspaceId) {
+        return workspaceService.getWorkspaceDetail(workspaceId);
+    }
+
+    @PostMapping("/{workspaceId}/reviews")
+    public ResponseEntity<ReviewCreateResponse> createReview(
+            @PathVariable Long workspaceId,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody ReviewCreateRequest request
+    ) {
+        AuthService.AuthenticatedUser user = authService.authenticate(authorizationHeader);
+        return ResponseEntity.status(201).body(reviewService.create(workspaceId, request, user.email()));
+    }
+
+    @PostMapping("/{workspaceId}/clean-score/recalculate")
+    public WorkspaceSummaryResponse recalculateCleanScore(
+            @PathVariable Long workspaceId,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        authService.requireAdmin(authorizationHeader);
+        return workspaceService.recalculateCleanScore(workspaceId);
     }
 }

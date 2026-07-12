@@ -2,10 +2,14 @@ package com.cleanmap.clean_alba_backend.repository;
 
 import com.cleanmap.clean_alba_backend.domain.Workspace;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import jakarta.persistence.LockModeType;
+
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 사업장 저장과 지도 목록 검색을 담당한다.
@@ -29,4 +33,8 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
     List<Workspace> search(@Param("minScore") Integer minScore,
                            @Param("maxScore") Integer maxScore,
                            @Param("keyword") String keyword);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT w FROM Workspace w WHERE w.workspaceId = :workspaceId")
+    Optional<Workspace> findByIdForUpdate(@Param("workspaceId") Long workspaceId);
 }
