@@ -26,9 +26,18 @@ public class KakaoPlaceService {
     @Value("${kakao.client-id}")
     private String restApiKey;
 
-    public List<KakaoPlace> search(String keyword) {
-        RestTemplate rt = new RestTemplate();
+    private final RestTemplate rt;
 
+    public KakaoPlaceService() {
+        this(new RestTemplate());
+    }
+
+    // 테스트에서 카카오 응답을 스텁하기 위한 생성자.
+    KakaoPlaceService(RestTemplate rt) {
+        this.rt = rt;
+    }
+
+    public List<KakaoPlace> search(String keyword) {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "KakaoAK " + restApiKey);
         HttpEntity<Void> request = new HttpEntity<>(headers);
@@ -67,9 +76,18 @@ public class KakaoPlaceService {
                 d.id(),
                 d.placeName(),
                 address,
-                d.categoryGroupName(),
+                category(d),
                 new BigDecimal(d.y()),   // 위도
                 new BigDecimal(d.x())    // 경도
         );
+    }
+
+    // category_group_name은 카카오의 15개 대분류에 속하지 않는 장소에서 빈 문자열로 온다.
+    // 그대로 두면 resolve가 "장소 정보 부족"으로 400을 내므로 "기타"로 채운다.
+    // (세부 분류는 프론트의 카테고리 체계와 맞지 않아 쓰지 않는다.)
+    private String category(KakaoLocalSearchResponse.Document d) {
+        return (d.categoryGroupName() != null && !d.categoryGroupName().isBlank())
+                ? d.categoryGroupName()
+                : "기타";
     }
 }

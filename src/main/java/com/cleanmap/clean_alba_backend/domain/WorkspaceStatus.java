@@ -23,11 +23,11 @@ public enum WorkspaceStatus {
         return DANGER;
     }
 
-    public Integer getMinScore() {
-        return minScore;
+    public Double getMinStoredScore() {
+        return minScore == null ? null : minScore - 0.5;
     }
 
-    public Integer getMaxScoreExclusive() {
-        return maxScoreExclusive;
+    public Double getMaxStoredScoreExclusive() {
+        return maxScoreExclusive == null ? null : maxScoreExclusive - 0.5;
     }
 }

@@ -23,8 +23,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 @Service
@@ -34,12 +37,13 @@ public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final ReviewRepository reviewRepository;
     private final KakaoPlaceService kakaoPlaceService;
+    private final WorkspaceResolveWriter workspaceResolveWriter;
 
     @Transactional(readOnly = true)
     public List<WorkspaceListResponse> getWorkspaceList(WorkspaceStatus status, String keyword) {
         String normalizedKeyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
-        Integer minScore = (status != null) ? status.getMinScore() : null;
-        Integer maxScore = (status != null) ? status.getMaxScoreExclusive() : null;
+        Double minScore = (status != null) ? status.getMinStoredScore() : null;
+        Double maxScore = (status != null) ? status.getMaxStoredScoreExclusive() : null;
 
         List<Workspace> workspaces = workspaceRepository.search(minScore, maxScore, normalizedKeyword);
 
@@ -105,16 +109,32 @@ public class WorkspaceService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "검색어가 필요합니다.");
         }
 
-        return kakaoPlaceService.search(keyword.trim()).stream()
-                .map(place -> workspaceRepository.findByKakaoPlaceId(place.kakaoPlaceId())
-                        .map(WorkspacePlaceSearchResponse::ofExisting)
-                        .orElseGet(() -> WorkspacePlaceSearchResponse.ofNew(place)))
-                .toList();
+        String normalizedKeyword = keyword.trim();
+        List<Workspace> existing = workspaceRepository.searchAllByKeyword(normalizedKeyword);
+        List<WorkspacePlaceSearchResponse> results = new ArrayList<>(
+                existing.stream().map(WorkspacePlaceSearchResponse::ofExisting).toList());
+        Set<Long> addedWorkspaceIds = new HashSet<>(
+                existing.stream().map(Workspace::getWorkspaceId).toList());
+
+        for (KakaoPlace place : kakaoPlaceService.search(normalizedKeyword)) {
+            Optional<Workspace> matched = workspaceRepository.findByKakaoPlaceId(place.kakaoPlaceId())
+                    .or(() -> existing.stream()
+                            .filter(workspace -> samePlace(workspace, place))
+                            .findFirst());
+            if (matched.isPresent()) {
+                Workspace workspace = matched.get();
+                if (addedWorkspaceIds.add(workspace.getWorkspaceId())) {
+                    results.add(WorkspacePlaceSearchResponse.ofExisting(workspace));
+                }
+            } else {
+                results.add(WorkspacePlaceSearchResponse.ofNew(place));
+            }
+        }
+        return results;
     }
 
     // 카카오 장소를 workspaceId로 변환한다. kakaoPlaceId가 이미 있으면 재사용, 없으면 생성.
     // 후기 작성 페이지(/review/write/:workspaceId) 진입 전에 호출된다.
-    @Transactional
     public WorkspaceResolveResponse resolveByKakao(WorkspaceResolveRequest request) {
         if (isBlank(request.kakaoPlaceId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "kakaoPlaceId가 필요합니다.");
@@ -131,18 +151,8 @@ public class WorkspaceService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "장소 정보가 부족합니다.");
         }
 
-        // district(상권)는 카카오가 제공하지 않으므로 null로 생성한다.
-        Workspace workspace = new Workspace(
-                request.name().trim(),
-                request.address().trim(),
-                request.category().trim(),
-                null,
-                request.latitude(),
-                request.longitude(),
-                kakaoPlaceId);
         try {
-            Workspace saved = workspaceRepository.save(workspace);
-            return new WorkspaceResolveResponse(saved.getWorkspaceId(), true);
+            return workspaceResolveWriter.create(request, kakaoPlaceId);
         } catch (DataIntegrityViolationException raceException) {
             // 동시 요청으로 같은 kakaoPlaceId가 먼저 생성된 경우 → 재조회해 재사용
             Workspace created = workspaceRepository.findByKakaoPlaceId(kakaoPlaceId)
@@ -153,6 +163,11 @@ public class WorkspaceService {
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private static boolean samePlace(Workspace workspace, KakaoPlace place) {
+        return workspace.getName().equals(place.name())
+                && workspace.getAddress().equals(place.address());
     }
 
     // 특정 사업장의 클린지수를 승인된 리뷰들로부터 재계산해 저장한다.

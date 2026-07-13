@@ -49,6 +49,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         return path.startsWith("/admin/")
                 || path.startsWith("/users/")
                 || "POST".equals(method) && path.equals("/workspaces")
+                || "POST".equals(method) && path.equals("/workspaces/resolve")
                 || "POST".equals(method) && path.matches("/workspaces/[^/]+/reviews")
                 || "POST".equals(method) && path.matches("/workspaces/[^/]+/clean-score/recalculate")
                 || "POST".equals(method) && path.matches("/reviews/[^/]+/attachments")

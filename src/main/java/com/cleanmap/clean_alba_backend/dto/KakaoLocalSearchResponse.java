@@ -14,7 +14,7 @@ public record KakaoLocalSearchResponse(List<Document> documents) {
     public record Document(
         String id,                                          // 카카오 장소 고유 ID
         @JsonProperty("place_name") String placeName,       // 장소명
-        @JsonProperty("category_group_name") String categoryGroupName, // 대분류(카페/음식점 등)
+        @JsonProperty("category_group_name") String categoryGroupName, // 대분류(카페/음식점 등). 15개 그룹 미해당 장소는 빈 문자열
         @JsonProperty("address_name") String addressName,   // 지번 주소
         @JsonProperty("road_address_name") String roadAddressName, // 도로명 주소
         String x,                                           // 경도(longitude)

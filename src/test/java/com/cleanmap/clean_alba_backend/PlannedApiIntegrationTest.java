@@ -63,10 +63,12 @@ class PlannedApiIntegrationTest {
         // When: the request reaches the application
         HttpResponse<String> response = request("POST", "/workspaces/10/reviews", "{bad", null);
         HttpResponse<String> negativeIdResponse = request("POST", "/workspaces/-1/reviews", "{bad", null);
+        HttpResponse<String> resolveResponse = request("POST", "/workspaces/resolve", "{bad", null);
 
         // Then: authentication rejects it before JSON parsing
         assertEquals(401, response.statusCode());
         assertEquals(401, negativeIdResponse.statusCode());
+        assertEquals(401, resolveResponse.statusCode());
     }
 
     @Test

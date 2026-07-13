@@ -30,9 +30,19 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
                    OR w.district LIKE CONCAT('%', :keyword, '%'))
             ORDER BY w.cleanScore DESC, w.workspaceId ASC
             """)
-    List<Workspace> search(@Param("minScore") Integer minScore,
-                           @Param("maxScore") Integer maxScore,
+    List<Workspace> search(@Param("minScore") Double minScore,
+                           @Param("maxScore") Double maxScore,
                            @Param("keyword") String keyword);
+
+    @Query("""
+            SELECT w FROM Workspace w
+            WHERE w.name LIKE CONCAT('%', :keyword, '%')
+               OR w.address LIKE CONCAT('%', :keyword, '%')
+               OR w.category LIKE CONCAT('%', :keyword, '%')
+               OR w.district LIKE CONCAT('%', :keyword, '%')
+            ORDER BY w.name ASC, w.workspaceId ASC
+            """)
+    List<Workspace> searchAllByKeyword(@Param("keyword") String keyword);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM Workspace w WHERE w.workspaceId = :workspaceId")
