@@ -7,7 +7,9 @@ import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import com.cleanmap.clean_alba_backend.dto.KakaoPlace;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceCreateRequest;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceListResponse;
+import com.cleanmap.clean_alba_backend.dto.WorkspaceNlSearchResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspacePlaceSearchResponse;
+import com.cleanmap.clean_alba_backend.dto.WorkspaceSearchFilter;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceResolveRequest;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceResolveResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceSummaryResponse;
@@ -38,6 +40,7 @@ public class WorkspaceService {
     private final ReviewRepository reviewRepository;
     private final KakaoPlaceService kakaoPlaceService;
     private final WorkspaceResolveWriter workspaceResolveWriter;
+    private final NaturalLanguageQueryParser naturalLanguageQueryParser;
 
     @Transactional(readOnly = true)
     public List<WorkspaceListResponse> getWorkspaceList(WorkspaceStatus status, String keyword) {
@@ -50,6 +53,24 @@ public class WorkspaceService {
         return workspaces.stream()
                 .map(WorkspaceListResponse::from)
                 .toList();
+    }
+
+    // 자연어 검색: Solar가 검색어를 조건으로 해석하고, 검색 자체는 DB가 수행한다.
+    // 점수 조건은 응답에 노출되는 반올림 점수 기준이므로 저장 점수 기준으로 ±0.5 보정한다.
+    @Transactional(readOnly = true)
+    public WorkspaceNlSearchResponse naturalLanguageSearch(String query) {
+        WorkspaceSearchFilter filter = naturalLanguageQueryParser.parse(query);
+
+        Double minStoredScore = (filter.minScore() == null) ? null : filter.minScore() - 0.5;
+        Double maxStoredScoreExclusive = (filter.maxScore() == null) ? null : filter.maxScore() + 0.5;
+
+        List<Workspace> workspaces = workspaceRepository.searchByFilter(
+                minStoredScore, maxStoredScoreExclusive,
+                filter.district(), filter.category(), filter.keyword());
+
+        return new WorkspaceNlSearchResponse(
+                filter,
+                workspaces.stream().map(WorkspaceListResponse::from).toList());
     }
 
     @Transactional(readOnly = true)

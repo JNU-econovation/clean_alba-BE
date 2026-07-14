@@ -44,6 +44,25 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
             """)
     List<Workspace> searchAllByKeyword(@Param("keyword") String keyword);
 
+    /** 자연어 해석 결과(점수 범위·상권·업종·키워드)를 AND로 결합해 검색한다. null인 조건은 무시된다. */
+    @Query("""
+            SELECT w FROM Workspace w
+            WHERE w.cleanScore IS NOT NULL
+              AND (:minScore IS NULL OR w.cleanScore >= :minScore)
+              AND (:maxScore IS NULL OR w.cleanScore < :maxScore)
+              AND (:district IS NULL OR w.district LIKE CONCAT('%', :district, '%'))
+              AND (:category IS NULL OR w.category LIKE CONCAT('%', :category, '%'))
+              AND (:keyword IS NULL
+                   OR w.name LIKE CONCAT('%', :keyword, '%')
+                   OR w.address LIKE CONCAT('%', :keyword, '%'))
+            ORDER BY w.cleanScore DESC, w.workspaceId ASC
+            """)
+    List<Workspace> searchByFilter(@Param("minScore") Double minScore,
+                                   @Param("maxScore") Double maxScore,
+                                   @Param("district") String district,
+                                   @Param("category") String category,
+                                   @Param("keyword") String keyword);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM Workspace w WHERE w.workspaceId = :workspaceId")
     Optional<Workspace> findByIdForUpdate(@Param("workspaceId") Long workspaceId);

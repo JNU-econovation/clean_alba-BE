@@ -3,6 +3,7 @@ package com.cleanmap.clean_alba_backend.controller;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceCreateRequest;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceListResponse;
+import com.cleanmap.clean_alba_backend.dto.WorkspaceNlSearchResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspacePlaceSearchResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceResolveRequest;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceResolveResponse;
@@ -53,6 +54,14 @@ public class WorkspaceController {
         @RequestParam(required = false) String keyword
     ) {
         return workspaceService.getWorkspaceList(status, keyword);
+    }
+
+    // GET /workspaces/nl-search — 자연어 검색 ("클린점수 60점 넘는 상대 카페")
+    @GetMapping("/nl-search")
+    public WorkspaceNlSearchResponse searchByNaturalLanguage(
+        @RequestParam String query
+    ) {
+        return workspaceService.naturalLanguageSearch(query);
     }
 
     // GET /workspaces/place-search — 기존 사업장 + 카카오 신규 장소 통합 검색 (후기 장소 선택 페이지)

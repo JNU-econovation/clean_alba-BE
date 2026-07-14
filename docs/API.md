@@ -244,6 +244,41 @@
 ### 2-8. 👑 클린점수 재계산
 `POST /workspaces/{workspaceId}/clean-score/recalculate` → `WorkspaceSummaryResponse`
 
+### 2-9. 🔓 자연어 검색
+`GET /workspaces/nl-search`
+
+"클린점수 60점 넘는 상대 카페 찾아줘" 같은 문장을 Solar LLM이 검색 조건으로 해석한 뒤, **검색 자체는 DB가** 수행한다(LLM이 사업장을 지어내지 않는다). 결과는 2-1과 동일하게 클린지수 내림차순.
+
+**Query Parameter**
+| Key | Type | 설명 |
+|---|---|---|
+| query | String (필수) | 자연어 검색어 |
+
+**Response Body** (`WorkspaceNlSearchResponse`)
+| Key | Type | 설명 |
+|---|---|---|
+| interpreted | Object | LLM이 해석한 검색 조건. 검색어에 없는 항목은 null |
+| interpreted.minScore / maxScore | Integer\|null | 클린지수 하한·상한. **응답에 노출되는 반올림 점수 기준이며 양끝 포함** |
+| interpreted.district | String\|null | 상권 (`상대`/`예대`/`정문`/`후문`) |
+| interpreted.category | String\|null | 업종 (`카페`/`식당`/`편의점`/`주점` 등) |
+| interpreted.keyword | String\|null | 상호명·주소 조각 |
+| results | Array | 2-1과 동일한 `WorkspaceListResponse` 배열 |
+
+```json
+// GET /workspaces/nl-search?query=클린점수 60점 넘는 상대 카페 찾아줘
+{
+  "interpreted": { "minScore":60, "maxScore":null, "district":"상대", "category":"카페", "keyword":null },
+  "results": [
+    { "workspaceId":2, "name":"메가MGC커피 상대점", "address":"광주 북구 용봉동 1097-3",
+      "category":"카페", "district":"상대", "latitude":35.1768, "longitude":126.9043,
+      "cleanScore":88, "status":"EXCELLENT" }
+  ]
+}
+```
+> `interpreted`를 검색 조건 칩("상대 · 카페 · 60점 이상")으로 노출하면 사용자가 오해석을 바로 알아챌 수 있다.
+> 2-1과 마찬가지로 **승인 리뷰가 있어 클린지수가 산출된 사업장만** 검색된다(등록만 되고 리뷰 없는 사업장은 안 나옴).
+> `UPSTAGE_API_KEY` 미설정 시 503, LLM 호출·해석 실패 시 502 (3-1 순화 API와 동일 규칙).
+
 ---
 
 ## 3. 리뷰 (Reviews)
@@ -352,6 +387,7 @@
 | 9 | POST | /workspaces | 👑 | 사업장 등록 |
 | 10 | POST | /workspaces/{id}/reviews | 🔒 | 후기 작성 |
 | 11 | POST | /workspaces/{id}/clean-score/recalculate | 👑 | 클린점수 재계산 |
+| 11-1 | GET | /workspaces/nl-search | 🔓 | 자연어 검색 (AI 조건 해석) |
 | 12 | POST | /reviews/purify-preview | 🔒 | AI 후기 순화 |
 | 13 | POST | /reviews/{id}/attachments | 🔒 | 인증자료 업로드 |
 | 14 | GET | /users/me/reviews | 🔒 | 내 리뷰 목록 |
