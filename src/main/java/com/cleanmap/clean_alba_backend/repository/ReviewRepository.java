@@ -32,6 +32,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @EntityGraph(attributePaths = "workspace")
     List<Review> findByAuthorEmailInOrderByCreatedAtDescReviewIdDesc(Collection<String> authorEmails);
 
+    boolean existsByWorkspace_WorkspaceIdAndAuthorEmail(Long workspaceId, String authorEmail);
+
     long countByStatus(ReviewStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

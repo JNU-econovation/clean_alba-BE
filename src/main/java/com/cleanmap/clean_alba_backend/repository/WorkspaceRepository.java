@@ -69,4 +69,6 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
 
     // 카카오 장소 기반 중복확인용
     Optional<Workspace> findByKakaoPlaceId(String kakaoPlaceId);
+
+    Optional<Workspace> findByNameAndAddress(String name, String address);
 }

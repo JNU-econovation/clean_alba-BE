@@ -29,3 +29,7 @@ admin:
 upstage:
   # 후기 순화(Solar) API 키. 코드에 하드코딩하지 않고 환경변수 UPSTAGE_API_KEY에서 읽는다.
   api-key: "${UPSTAGE_API_KEY}"
+app:
+  seed:
+    real-data:
+      enabled: "${REAL_DATA_SEED_ENABLED:false}"
