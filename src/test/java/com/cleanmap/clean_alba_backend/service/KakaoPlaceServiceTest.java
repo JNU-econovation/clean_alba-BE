@@ -2,14 +2,21 @@ package com.cleanmap.clean_alba_backend.service;
 
 import com.cleanmap.clean_alba_backend.dto.KakaoPlace;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.net.SocketTimeoutException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
@@ -68,6 +75,54 @@ class KakaoPlaceServiceTest {
         // Then: 빈 값 대신 기본값이 채워진다(주소는 도로명이 비어 지번으로 대체)
         assertEquals("기타", places.get(0).category());
         assertEquals("광주 북구 용봉동 3", places.get(0).address());
+    }
+
+    @Test
+    void koreanKeywordIsUrlEncodedWithRequiredQueryParam() {
+        // Given/When: 한글 키워드로 검색하면 (searchWith가 인코딩된 URL로 기대치를 검증)
+
+        // Then: query 파라미터에 퍼센트 인코딩된 한글이 담긴 요청이 카카오로 나간다
+        //       (SEARCH_URL = ...keyword.json?query=%EC%9A%A9%EB%B4%89&size=15)
+        assertEquals(0, searchWith("{ \"documents\": [] }").size());
+    }
+
+    @Test
+    void upstreamErrorStatusIsLoggedAndExposedAs502() {
+        // Given: 카카오가 키 오류(401), 권한 오류(403), 잘못된 요청(400), 쿼터 초과(429)를 반환한다
+        for (HttpStatus upstream : List.of(
+                HttpStatus.BAD_REQUEST, HttpStatus.UNAUTHORIZED,
+                HttpStatus.FORBIDDEN, HttpStatus.TOO_MANY_REQUESTS)) {
+            RestTemplate restTemplate = new RestTemplate();
+            MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+            server.expect(requestTo(SEARCH_URL)).andRespond(withStatus(upstream)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"errorType\":\"test\",\"message\":\"upstream error\"}"));
+
+            // When: 통합 검색이 카카오를 호출하면
+            ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                    () -> new KakaoPlaceService(restTemplate).search("용봉"));
+
+            // Then: 클라이언트에는 502로 응답하되, 사유에 카카오의 실제 상태를 남긴다
+            assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
+            assertTrue(exception.getReason().contains(String.valueOf(upstream.value())),
+                    "reason should contain upstream status: " + exception.getReason());
+        }
+    }
+
+    @Test
+    void upstreamTimeoutBecomes502() {
+        // Given: 카카오 연결이 타임아웃된다
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        server.expect(requestTo(SEARCH_URL))
+                .andRespond(withException(new SocketTimeoutException("read timed out")));
+
+        // When: 통합 검색이 카카오를 호출하면
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> new KakaoPlaceService(restTemplate).search("용봉"));
+
+        // Then: 무한 대기 없이 502로 실패한다
+        assertEquals(HttpStatus.BAD_GATEWAY, exception.getStatusCode());
     }
 
     private List<KakaoPlace> searchWith(String kakaoResponseJson) {

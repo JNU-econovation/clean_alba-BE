@@ -115,6 +115,19 @@ class WorkspaceContractIntegrationTest {
         }
     }
 
+    @Test
+    void placeSearchRejectsBlankKeyword() throws Exception {
+        // Given/When: 공개 통합 검색을 공백 keyword로 호출하면 (토큰 없음)
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/workspaces/place-search?keyword=%20"))
+                .GET()
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Then: 카카오 호출 없이 400으로 거부한다
+        assertEquals(400, response.statusCode());
+    }
+
     // Solar의 해석 능력이 아니라, 해석 결과(WorkspaceSearchFilter)가 DB 검색 조건으로
     // 제대로 옮겨지는지를 검증한다. 그래서 파서는 목으로 대체하고 필터를 직접 주입한다.
     @Test
