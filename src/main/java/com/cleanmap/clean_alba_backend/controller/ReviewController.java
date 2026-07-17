@@ -27,9 +27,9 @@ public class ReviewController {
     private final ReviewService reviewService;
     private final AuthService authService;
 
-    // POST /reviews/purify-preview
+    // POST /reviews/purity-preview
     // 후기 원문 → 리스크 평가 + 순화된 3가지 버전(JSON) 반환. 제출 전 미리보기용. (로그인 필요)
-    @PostMapping("/purify-preview")
+    @PostMapping("/purity-preview")
     public JsonNode purifyPreview(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody PurifyRequest request

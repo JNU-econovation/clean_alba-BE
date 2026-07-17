@@ -94,7 +94,7 @@ PATCH /admin/reviews/{reviewId}/status
 ## 6. 후기 순화 흐름
 
 ```text
-POST /reviews/purify-preview
+POST /reviews/purity-preview
   -> ReviewController.purifyPreview
   -> PurifyService.purify
   -> 입력과 UPSTAGE_API_KEY 확인

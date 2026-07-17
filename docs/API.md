@@ -284,7 +284,7 @@
 ## 3. 리뷰 (Reviews)
 
 ### 3-1. 🔒 후기 순화 미리보기 (AI)
-`POST /reviews/purify-preview`
+`POST /reviews/purity-preview`
 
 주관식 원문을 Upstage Solar LLM으로 분석 → 리스크 평가 + 뉘앙스가 다른 3가지 순화 버전 반환.
 
@@ -388,7 +388,7 @@
 | 10 | POST | /workspaces/{id}/reviews | 🔒 | 후기 작성 |
 | 11 | POST | /workspaces/{id}/clean-score/recalculate | 👑 | 클린점수 재계산 |
 | 11-1 | GET | /workspaces/nl-search | 🔓 | 자연어 검색 (AI 조건 해석) |
-| 12 | POST | /reviews/purify-preview | 🔒 | AI 후기 순화 |
+| 12 | POST | /reviews/purity-preview | 🔒 | AI 후기 순화 |
 | 13 | POST | /reviews/{id}/attachments | 🔒 | 인증자료 업로드 |
 | 14 | GET | /users/me/reviews | 🔒 | 내 리뷰 목록 |
 | 15 | GET | /admin/reviews | 👑 | 검수 목록 |
