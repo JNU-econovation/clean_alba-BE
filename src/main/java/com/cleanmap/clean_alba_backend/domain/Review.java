@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import com.cleanmap.clean_alba_backend.dto.ReviewCreateRequest;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 근무 경험과 8개 위반 여부를 기록하는 리뷰 엔티티다.
@@ -57,6 +59,10 @@ public class Review {
 
     @Column(nullable = false)
     private boolean overtimePayViolation;       // 초과근무 급여 미지급
+    @Enumerated(EnumType.STRING)
+    private DayType dayType;
+    @Enumerated(EnumType.STRING)
+    private TimeSlot timeSlot;
 
     // ── 점수에 반영되지 않는 별도 정보 ──
     private Integer coworkerCount;              // 동시간대 근무자 수 (주관식)
@@ -79,13 +85,15 @@ public class Review {
         this.contractViolation = request.contractViolation();
         this.minimumWageViolation = request.minimumWageViolation();
         this.weeklyAllowanceViolation = request.weeklyAllowanceViolation();
-        this.breakTimeViolation = request.breakTimeViolation();
+        this.breakTimeViolation = Boolean.TRUE.equals(request.breakTimeViolation());
         this.wageDelayViolation = request.wageDelayViolation();
         this.scheduleChangeViolation = request.scheduleChangeViolation();
         this.substituteCoercionViolation = request.substituteCoercionViolation();
         this.overtimePayViolation = request.overtimePayViolation();
         this.coworkerCount = request.coworkerCount();
         this.content = request.content() == null ? null : request.content().trim();
+        this.dayType = request.dayType();
+        this.timeSlot = request.timeSlot();
         this.authorEmail = authorEmail;
     }
 
@@ -102,6 +110,18 @@ public class Review {
     // 이 리뷰 1건의 점수: 100 - (위반 항목 수 × 12.5)
     public double score() {
         return 100.0 - 12.5 * countViolations();
+    }
+    public List<String> violationItems() {
+        List<String> items = new ArrayList<>();
+        if (contractViolation) items.add("CONTRACT");
+        if (minimumWageViolation) items.add("MINIMUM_WAGE");
+        if (weeklyAllowanceViolation) items.add("WEEKLY_ALLOWANCE");
+        if (breakTimeViolation) items.add("BREAK_TIME");
+        if (wageDelayViolation) items.add("WAGE_DELAY");
+        if (scheduleChangeViolation) items.add("SCHEDULE_CHANGE");
+        if (substituteCoercionViolation) items.add("SUBSTITUTE_COERCION");
+        if (overtimePayViolation) items.add("OVERTIME_PAY");
+        return List.copyOf(items);
     }
 
     private int countViolations() {

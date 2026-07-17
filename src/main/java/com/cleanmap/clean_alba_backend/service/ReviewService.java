@@ -42,8 +42,7 @@ public class ReviewService {
 
     @Transactional
     public ReviewCreateResponse create(Long workspaceId, ReviewCreateRequest request, String authorEmail) {
-        if (request == null || !request.hasAllChecklistAnswers()
-                || request.coworkerCount() != null && request.coworkerCount() < 0) {
+        if (request == null || !request.hasRequiredFields()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "체크리스트와 근무자 수를 확인해주세요.");
         }
         Workspace workspace = workspaceRepository.findById(workspaceId)

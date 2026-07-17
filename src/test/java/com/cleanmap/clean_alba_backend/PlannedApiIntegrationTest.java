@@ -88,7 +88,10 @@ class PlannedApiIntegrationTest {
                   "wageDelayViolation": false,
                   "scheduleChangeViolation": false,
                   "substituteCoercionViolation": false,
-                  "overtimePayViolation": false
+                  "overtimePayViolation": false,
+                  "coworkerCount": 0,
+                  "dayType": "weekday",
+                  "timeSlot": "morning"
                 }
                 """;
         HttpResponse<String> created = request("POST", "/workspaces/10/reviews", reviewJson, userToken);
@@ -120,7 +123,9 @@ class PlannedApiIntegrationTest {
                   "substituteCoercionViolation": false,
                   "overtimePayViolation": false,
                   "coworkerCount": 2,
-                  "content": "휴게시간이 부족했어요."
+                  "content": "휴게시간이 부족했어요.",
+                  "dayType": "weekday",
+                  "timeSlot": "morning"
                 }
                 """;
 

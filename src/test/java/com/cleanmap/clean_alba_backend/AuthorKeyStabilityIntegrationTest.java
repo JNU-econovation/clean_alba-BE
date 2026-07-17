@@ -65,7 +65,10 @@ class AuthorKeyStabilityIntegrationTest {
               "wageDelayViolation": false,
               "scheduleChangeViolation": false,
               "substituteCoercionViolation": false,
-              "overtimePayViolation": false
+              "overtimePayViolation": false,
+              "coworkerCount": 0,
+              "dayType": "weekday",
+              "timeSlot": "morning"
             }
             """;
 
@@ -119,7 +122,8 @@ class AuthorKeyStabilityIntegrationTest {
         // Given: kakao 키 도입 이전에 email 키로 저장된 레거시 리뷰가 있다
         Workspace workspace = saveWorkspace("레거시 이메일 키 검증 카페");
         ReviewCreateRequest request = new ReviewCreateRequest(
-                false, false, false, false, false, false, false, false, null, null);
+                false, false, false, false, false, false, false, false, 0, null,
+                com.cleanmap.clean_alba_backend.domain.DayType.WEEKDAY, com.cleanmap.clean_alba_backend.domain.TimeSlot.MORNING);
         Review legacy = reviewRepository.saveAndFlush(
                 new Review(workspace, request, "legacy@example.com"));
 

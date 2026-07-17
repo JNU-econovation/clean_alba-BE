@@ -15,6 +15,7 @@ import com.cleanmap.clean_alba_backend.service.AuthService;
 import com.cleanmap.clean_alba_backend.service.ReviewService;
 import com.cleanmap.clean_alba_backend.service.WorkspaceService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -98,7 +99,7 @@ public class WorkspaceController {
     public ResponseEntity<ReviewCreateResponse> createReview(
             @PathVariable Long workspaceId,
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-            @RequestBody ReviewCreateRequest request
+            @Valid @RequestBody ReviewCreateRequest request
     ) {
         AuthService.AuthenticatedUser user = authService.authenticate(authorizationHeader);
         return ResponseEntity.status(201).body(reviewService.create(workspaceId, request, user.authorKey()));
