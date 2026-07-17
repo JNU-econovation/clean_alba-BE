@@ -53,8 +53,8 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReviewResponse> getMyReviews(String authorEmail) {
-        return reviewRepository.findByAuthorEmailOrderByCreatedAtDescReviewIdDesc(authorEmail)
+    public List<ReviewResponse> getMyReviews(List<String> authorKeys) {
+        return reviewRepository.findByAuthorEmailInOrderByCreatedAtDescReviewIdDesc(authorKeys)
                 .stream()
                 .map(ReviewResponse::from)
                 .toList();
@@ -68,7 +68,10 @@ public class ReviewService {
     ) {
         Review review = reviewRepository.findByIdForUpdate(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found."));
-        if (!user.email().equals(review.getAuthorEmail()) && !"ADMIN".equals(user.role())) {
+        // 안정 키(kakao:{kakaoId})와 레거시 email 키 어느 쪽으로 저장됐든 본인 리뷰로 인정한다
+        String reviewAuthor = review.getAuthorEmail();
+        boolean isAuthor = reviewAuthor != null && user.authorKeyCandidates().contains(reviewAuthor);
+        if (!isAuthor && !"ADMIN".equals(user.role())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 리뷰에만 첨부할 수 있습니다.");
         }
         if (reviewAttachmentRepository.countByReview_ReviewId(reviewId) >= MAX_ATTACHMENTS_PER_REVIEW) {

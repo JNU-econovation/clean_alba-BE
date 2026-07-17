@@ -24,6 +24,6 @@ public class UserController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
     ) {
         AuthService.AuthenticatedUser user = authService.authenticate(authorizationHeader);
-        return reviewService.getMyReviews(user.email());
+        return reviewService.getMyReviews(user.authorKeyCandidates());
     }
 }

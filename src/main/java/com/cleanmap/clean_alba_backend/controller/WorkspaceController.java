@@ -101,7 +101,7 @@ public class WorkspaceController {
             @RequestBody ReviewCreateRequest request
     ) {
         AuthService.AuthenticatedUser user = authService.authenticate(authorizationHeader);
-        return ResponseEntity.status(201).body(reviewService.create(workspaceId, request, user.email()));
+        return ResponseEntity.status(201).body(reviewService.create(workspaceId, request, user.authorKey()));
     }
 
     @PostMapping("/{workspaceId}/clean-score/recalculate")

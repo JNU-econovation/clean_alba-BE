@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 
 import jakarta.persistence.LockModeType;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +27,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @EntityGraph(attributePaths = "workspace")
     List<Review> findByAuthorEmailOrderByCreatedAtDescReviewIdDesc(String authorEmail);
+
+    // 내 리뷰 조회용: 안정 키(kakao:{kakaoId})와 레거시 email 키를 함께 조회한다
+    @EntityGraph(attributePaths = "workspace")
+    List<Review> findByAuthorEmailInOrderByCreatedAtDescReviewIdDesc(Collection<String> authorEmails);
 
     long countByStatus(ReviewStatus status);
 
