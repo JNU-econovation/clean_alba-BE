@@ -11,6 +11,7 @@ import org.springframework.web.filter.CorsFilter;
 import java.util.List;
 
 // CORS를 MVC(DispatcherServlet) 단계가 아니라 서블릿 필터 단계에서 처리한다.
+// 서블릿 : HTTP 요청&응답 처리를 담당하는 기본 기술
 // JwtAuthFilter보다 먼저 실행되므로, 인증 실패(401/403)로 요청이 중단돼도 응답에 CORS 헤더가 붙어
 // 프론트엔드(vercel/localhost)가 상태 코드를 정상적으로 읽을 수 있다.
 @Configuration
@@ -21,7 +22,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "https://cleanalb-map-fe.vercel.app"
+                "https://clean-alba-map.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

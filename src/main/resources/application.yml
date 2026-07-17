@@ -17,7 +17,7 @@ spring:
 kakao:
   client-id: "${KAKAO_CLIENT_ID}"        #카카오 디벨로퍼스에서 발급받은 rest api키
   client-secret: "${KAKAO_CLIENT_SECRET}"    #카카오 디벨로퍼스 -> 내 앱 -> 보안 에서 발급받은 시크릿 키
-  redirect-url: "https://cleanalb-map-fe.vercel.app/kakao/auth-code"
+  redirect-url: "https://clean-alba-map.vercel.app/kakao/auth-code"
   # 로그인 성공 후 카카오가 인가코드를 들고 돌아올 프론트 주소
 jwt:
   secret: "${JWT_SECRET}"
