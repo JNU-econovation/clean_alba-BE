@@ -17,7 +17,8 @@ public record WorkspaceSummaryResponse(
     Integer cleanScore,
     WorkspaceStatus status,
     long reviewCount,
-    List<ChecklistStatResponse> checklistStats
+    List<ChecklistStatResponse> checklistStats,
+    String reviewSummary
 ) {
     /** 엔티티를 외부 응답으로 변환하면서 점수 반올림과 상태 판정을 수행한다. */
     public static WorkspaceSummaryResponse from(Workspace workspace) {
@@ -35,7 +36,8 @@ public record WorkspaceSummaryResponse(
             displayScore,
             status,
             0,
-            List.of()
+            List.of(),
+            null
         );
     }
 }

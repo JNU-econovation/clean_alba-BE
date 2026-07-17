@@ -12,8 +12,10 @@ import com.cleanmap.clean_alba_backend.service.WorkspaceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -113,6 +115,43 @@ class WorkspaceContractIntegrationTest {
         } finally {
             workspaceRepository.deleteById(existing.getWorkspaceId());
         }
+    }
+
+    @Test
+    void placeSearchReturnsExistingDatabasePlacesWhenKakaoFails() throws Exception {
+        String keyword = "장애대응카페";
+        Workspace existing = workspaceRepository.saveAndFlush(new Workspace(
+                keyword, "광주 북구 기존로 3", "카페", "예대",
+                new BigDecimal("35.2000000"), new BigDecimal("126.2000000")));
+        when(kakaoPlaceService.search(keyword)).thenThrow(
+                new ResponseStatusException(HttpStatus.BAD_GATEWAY, "카카오 장소 검색에 실패했습니다."));
+
+        try {
+            JsonNode results = getJson("/workspaces/place-search?keyword="
+                    + URLEncoder.encode(keyword, StandardCharsets.UTF_8));
+
+            assertEquals(1, results.size());
+            assertTrue(containsWorkspace(results, existing.getWorkspaceId()));
+        } finally {
+            workspaceRepository.deleteById(existing.getWorkspaceId());
+        }
+    }
+
+    @Test
+    void placeSearchKeepsKakaoFailureWhenDatabaseHasNoMatch() throws Exception {
+        String keyword = "결과없는장애검색";
+        when(kakaoPlaceService.search(keyword)).thenThrow(
+                new ResponseStatusException(HttpStatus.BAD_GATEWAY, "카카오 장소 검색에 실패했습니다."));
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/workspaces/place-search?keyword="
+                        + URLEncoder.encode(keyword, StandardCharsets.UTF_8)))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(502, response.statusCode());
     }
 
     @Test

@@ -190,6 +190,8 @@ class PlannedApiIntegrationTest {
         assertEquals(1, objectMapper.readTree(workspaceDetail.body()).path("reviewCount").asInt());
         assertEquals(200, workspaceSummary.statusCode());
         assertEquals(1, objectMapper.readTree(workspaceSummary.body()).path("reviewCount").asInt());
+        assertEquals("휴게시간이 부족했어요.",
+                objectMapper.readTree(workspaceSummary.body()).path("reviewSummary").asString());
         assertEquals(200, stats.statusCode());
         assertTrue(objectMapper.readTree(stats.body()).path("approvedReviews").asLong() > 0);
 

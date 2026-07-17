@@ -210,6 +210,7 @@
 |---|---|---|
 | reviewCount | Number | 승인 리뷰 수 |
 | checklistStats | Array | 항목별 통계 (아래) |
+| reviewSummary | String \| null | 승인 리뷰 중 내용이 있는 첫 후기 본문. 없으면 null |
 
 `checklistStats[]` 원소: `{ "item":"CONTRACT", "compliantCount":3, "violationCount":1 }` (item 코드는 §0 표 참고)
 

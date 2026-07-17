@@ -24,6 +24,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -35,6 +37,8 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 public class WorkspaceService {
+
+    private static final Logger log = LoggerFactory.getLogger(WorkspaceService.class);
 
     private final WorkspaceRepository workspaceRepository;
     private final ReviewRepository reviewRepository;
@@ -83,7 +87,7 @@ public class WorkspaceService {
         return new WorkspaceSummaryResponse(
                 base.workspaceId(), base.name(), base.address(), base.category(), base.district(),
                 base.latitude(), base.longitude(), base.cleanScore(), base.status(),
-                reviews.size(), checklistStats(reviews)
+                reviews.size(), checklistStats(reviews), reviewSummary(reviews)
         );
     }
 
@@ -137,7 +141,19 @@ public class WorkspaceService {
         Set<Long> addedWorkspaceIds = new HashSet<>(
                 existing.stream().map(Workspace::getWorkspaceId).toList());
 
-        for (KakaoPlace place : kakaoPlaceService.search(normalizedKeyword)) {
+        List<KakaoPlace> kakaoPlaces;
+        try {
+            kakaoPlaces = kakaoPlaceService.search(normalizedKeyword);
+        } catch (ResponseStatusException exception) {
+            if (results.isEmpty()) {
+                throw exception;
+            }
+            log.warn("카카오 장소 검색 실패로 DB 검색 결과만 반환합니다. status={}",
+                    exception.getStatusCode().value());
+            return results;
+        }
+
+        for (KakaoPlace place : kakaoPlaces) {
             Optional<Workspace> matched = workspaceRepository.findByKakaoPlaceId(place.kakaoPlaceId())
                     .or(() -> existing.stream()
                             .filter(workspace -> samePlace(workspace, place))
@@ -210,7 +226,7 @@ public class WorkspaceService {
         return new WorkspaceSummaryResponse(
                 base.workspaceId(), base.name(), base.address(), base.category(), base.district(),
                 base.latitude(), base.longitude(), base.cleanScore(), base.status(),
-                approved.size(), checklistStats(approved)
+                approved.size(), checklistStats(approved), reviewSummary(approved)
         );
     }
 
@@ -241,5 +257,13 @@ public class WorkspaceService {
     private ChecklistStatResponse stat(String item, List<Review> reviews, Predicate<Review> violation) {
         long violationCount = reviews.stream().filter(violation).count();
         return new ChecklistStatResponse(item, reviews.size() - violationCount, violationCount);
+    }
+
+    private String reviewSummary(List<Review> reviews) {
+        return reviews.stream()
+                .map(Review::getContent)
+                .filter(content -> content != null && !content.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 }
