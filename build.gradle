@@ -23,6 +23,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // Spring Boot 4는 Flyway 자동 구성이 spring-boot-flyway 모듈로 분리되어 있어
+    // 이 모듈이 없으면 flyway-core가 있어도 마이그레이션이 실행되지 않는다.
+    implementation 'org.springframework.boot:spring-boot-flyway'
     implementation 'org.flywaydb:flyway-mysql'
     implementation platform('software.amazon.awssdk:bom:2.31.77')
     implementation 'software.amazon.awssdk:s3'
