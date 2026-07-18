@@ -33,3 +33,11 @@ app:
   seed:
     real-data:
       enabled: "${REAL_DATA_SEED_ENABLED:false}"
+attachment:
+  storage:
+    # 운영(EC2)은 프로필 없이 기동하므로 여기 값이 적용된다.
+    # 인증은 Access Key 없이 EC2 IAM 역할(DefaultCredentialsProvider)을 사용한다.
+    # local/test 프로필은 각자 type: memory 로 덮어쓴다.
+    type: s3
+    bucket: cleanalba-attachments-759542245392-ap-southeast-2-an
+    region: ap-southeast-2
