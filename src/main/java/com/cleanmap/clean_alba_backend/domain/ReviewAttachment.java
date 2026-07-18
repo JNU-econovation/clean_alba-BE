@@ -42,7 +42,9 @@ public class ReviewAttachment {
 
     @Lob
     @Basic(fetch = FetchType.LAZY)
-    @Column
+    // 길이를 지정하지 않으면 기본 255로 취급되어 MySQL validate가 TINYBLOB을 기대한다.
+    // DB 컬럼(LONGBLOB)과 일치하도록 최대 길이를 명시한다.
+    @Column(length = Integer.MAX_VALUE)
     private byte[] content;
 
     @Column(name = "storage_key", length = 512)
