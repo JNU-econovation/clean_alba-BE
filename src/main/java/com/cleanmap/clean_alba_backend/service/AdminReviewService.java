@@ -1,15 +1,21 @@
 package com.cleanmap.clean_alba_backend.service;
 
 import com.cleanmap.clean_alba_backend.domain.Review;
+import com.cleanmap.clean_alba_backend.domain.ReviewAttachment;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
 import com.cleanmap.clean_alba_backend.domain.Workspace;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import com.cleanmap.clean_alba_backend.dto.AdminReviewResponse;
+import com.cleanmap.clean_alba_backend.dto.AdminReviewAttachmentResponse;
 import com.cleanmap.clean_alba_backend.dto.AdminStatsResponse;
 import com.cleanmap.clean_alba_backend.dto.PagedResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateResponse;
 import com.cleanmap.clean_alba_backend.repository.ReviewRepository;
+import com.cleanmap.clean_alba_backend.repository.ReviewAttachmentRepository;
 import com.cleanmap.clean_alba_backend.repository.WorkspaceRepository;
+import com.cleanmap.clean_alba_backend.storage.AttachmentStorage;
+import com.cleanmap.clean_alba_backend.storage.AttachmentStorageException;
+import com.cleanmap.clean_alba_backend.storage.AttachmentStorageObjectNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -17,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Locale;
 
@@ -25,7 +33,9 @@ import java.util.Locale;
 public class AdminReviewService {
 
     private final ReviewRepository reviewRepository;
+    private final ReviewAttachmentRepository reviewAttachmentRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final AttachmentStorage attachmentStorage;
 
     @Transactional(readOnly = true)
     public PagedResponse<AdminReviewResponse> getReviews(String statusValue, int page, int size) {
@@ -46,7 +56,34 @@ public class AdminReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found."));
         review.getWorkspace().getName();
-        return AdminReviewResponse.from(review);
+        List<AdminReviewAttachmentResponse> attachments = reviewAttachmentRepository
+                .findByReview_ReviewIdOrderByAttachmentIdAsc(reviewId)
+                .stream()
+                .map(AdminReviewAttachmentResponse::from)
+                .toList();
+        return AdminReviewResponse.from(review, attachments);
+    }
+
+    @Transactional(readOnly = true)
+    public AttachmentDownload openAttachment(Long reviewId, Long attachmentId) {
+        ReviewAttachment attachment = reviewAttachmentRepository.findByAttachmentIdAndReview_ReviewId(attachmentId, reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attachment not found."));
+        if (attachment.getStorageKey() == null || attachment.getStorageKey().isBlank()) {
+            if (attachment.getContent() == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stored attachment not found.");
+            }
+            return new AttachmentDownload(attachment, new ByteArrayInputStream(attachment.getContent()));
+        }
+        try {
+            return new AttachmentDownload(attachment, attachmentStorage.load(attachment.getStorageKey()));
+        } catch (AttachmentStorageObjectNotFoundException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Stored attachment not found.");
+        } catch (AttachmentStorageException exception) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "인증자료를 불러올 수 없습니다.");
+        }
+    }
+
+    public record AttachmentDownload(ReviewAttachment attachment, InputStream content) {
     }
 
     @Transactional

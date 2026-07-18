@@ -5,6 +5,7 @@ import com.cleanmap.clean_alba_backend.dto.AdminStatsResponse;
 import com.cleanmap.clean_alba_backend.dto.PagedResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateRequest;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateResponse;
+import com.cleanmap.clean_alba_backend.domain.ReviewAttachment;
 import com.cleanmap.clean_alba_backend.service.AdminReviewService;
 import com.cleanmap.clean_alba_backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/admin")
@@ -43,6 +51,39 @@ public class AdminReviewController {
     ) {
         authService.requireAdmin(authorizationHeader);
         return adminReviewService.getReview(reviewId);
+    }
+
+    @GetMapping("/reviews/{reviewId}/attachments/{attachmentId}")
+    public ResponseEntity<StreamingResponseBody> downloadAttachment(
+            @PathVariable Long reviewId,
+            @PathVariable Long attachmentId,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        authService.requireAdmin(authorizationHeader);
+        AdminReviewService.AttachmentDownload download = adminReviewService.openAttachment(reviewId, attachmentId);
+        ReviewAttachment attachment = download.attachment();
+        return ResponseEntity.ok()
+                .contentType(safeMediaType(attachment.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(attachment.getOriginalFileName(), StandardCharsets.UTF_8)
+                        .build()
+                        .toString())
+                .contentLength(attachment.getSize())
+                .body(outputStream -> {
+                    try (var inputStream = download.content()) {
+                        inputStream.transferTo(outputStream);
+                    }
+                });
+    }
+
+    private MediaType safeMediaType(String contentType) {
+        try {
+            return contentType == null || contentType.isBlank()
+                    ? MediaType.APPLICATION_OCTET_STREAM
+                    : MediaType.parseMediaType(contentType);
+        } catch (IllegalArgumentException exception) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
     @PatchMapping("/reviews/{reviewId}/status")

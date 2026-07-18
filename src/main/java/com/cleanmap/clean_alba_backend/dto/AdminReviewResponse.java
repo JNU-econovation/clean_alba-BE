@@ -4,6 +4,7 @@ import com.cleanmap.clean_alba_backend.domain.Review;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record AdminReviewResponse(
         Long reviewId,
@@ -21,9 +22,17 @@ public record AdminReviewResponse(
         Integer coworkerCount,
         String content,
         ReviewStatus status,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<AdminReviewAttachmentResponse> attachments
 ) {
     public static AdminReviewResponse from(Review review) {
+        return from(review, List.of());
+    }
+
+    public static AdminReviewResponse from(
+            Review review,
+            List<AdminReviewAttachmentResponse> attachments
+    ) {
         return new AdminReviewResponse(
                 review.getReviewId(),
                 review.getWorkspace().getWorkspaceId(),
@@ -40,7 +49,8 @@ public record AdminReviewResponse(
                 review.getCoworkerCount(),
                 review.getContent(),
                 review.getStatus(),
-                review.getCreatedAt()
+                review.getCreatedAt(),
+                List.copyOf(attachments)
         );
     }
 }

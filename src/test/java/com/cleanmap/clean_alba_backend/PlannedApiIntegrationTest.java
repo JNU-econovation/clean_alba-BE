@@ -2,6 +2,7 @@ package com.cleanmap.clean_alba_backend;
 
 import com.cleanmap.clean_alba_backend.util.JwtUtil;
 import com.cleanmap.clean_alba_backend.repository.WorkspaceRepository;
+import com.cleanmap.clean_alba_backend.repository.ReviewAttachmentRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +14,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,6 +42,9 @@ class PlannedApiIntegrationTest {
 
     @Autowired
     private WorkspaceRepository workspaceRepository;
+
+    @Autowired
+    private ReviewAttachmentRepository reviewAttachmentRepository;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -152,7 +157,11 @@ class PlannedApiIntegrationTest {
 
         // Then: only the documented attachment formats are accepted
         assertEquals(201, attachment.statusCode());
+        long attachmentId = objectMapper.readTree(attachment.body()).path("attachmentId").asLong();
         assertEquals(reviewId, objectMapper.readTree(attachment.body()).path("reviewId").asLong());
+        var storedAttachment = reviewAttachmentRepository.findById(attachmentId).orElseThrow();
+        assertTrue(storedAttachment.getStorageKey().startsWith("reviews/" + reviewId + "/"));
+        assertEquals(null, storedAttachment.getContent());
         assertEquals(400, invalidAttachment.statusCode());
 
         // When: the user reads their own reviews
@@ -178,6 +187,20 @@ class PlannedApiIntegrationTest {
         assertEquals(200, queue.statusCode());
         assertTrue(queue.body().contains("\"reviewId\":" + reviewId));
         assertEquals(200, detail.statusCode());
+        JsonNode detailBody = objectMapper.readTree(detail.body());
+        attachmentId = detailBody.path("attachments").get(0).path("attachmentId").asLong();
+        assertEquals("proof.pdf", detailBody.path("attachments").get(0).path("fileName").asString());
+        assertEquals("application/pdf", detailBody.path("attachments").get(0).path("contentType").asString());
+        assertEquals(8, detailBody.path("attachments").get(0).path("size").asInt());
+
+        HttpResponse<byte[]> downloaded = download(
+                "/admin/reviews/" + reviewId + "/attachments/" + attachmentId, adminToken);
+        assertEquals(200, downloaded.statusCode());
+        assertEquals("%PDF-1.4", new String(downloaded.body(), StandardCharsets.UTF_8));
+        assertEquals(403, download(
+                "/admin/reviews/" + reviewId + "/attachments/" + attachmentId, userToken).statusCode());
+        assertEquals(404, download(
+                "/admin/reviews/" + (reviewId + 1) + "/attachments/" + attachmentId, adminToken).statusCode());
         assertEquals(200, approved.statusCode());
         assertEquals("APPROVED", objectMapper.readTree(approved.body()).path("status").asString());
         assertEquals(409, request(
@@ -281,5 +304,14 @@ class PlannedApiIntegrationTest {
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<byte[]> download(String path, String token) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + path))
+                .header("Authorization", "Bearer " + token)
+                .GET()
+                .build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
     }
 }

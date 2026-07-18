@@ -1,5 +1,8 @@
 package com.cleanmap.clean_alba_backend.domain;
 
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -28,8 +31,8 @@ public class ReviewAttachment {
     @JoinColumn(name = "review_id", nullable = false)
     private Review review;
 
-    @Column(nullable = false)
-    private String fileName;
+    @Column(name = "file_name", nullable = false)
+    private String originalFileName;
 
     @Column(nullable = false)
     private String contentType;
@@ -38,14 +41,21 @@ public class ReviewAttachment {
     private long size;
 
     @Lob
-    @Column(nullable = false)
+    @Basic(fetch = FetchType.LAZY)
+    @Column
     private byte[] content;
 
-    public ReviewAttachment(Review review, String fileName, String contentType, byte[] content) {
+    @Column(name = "storage_key", length = 512)
+    private String storageKey;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    public ReviewAttachment(Review review, String originalFileName, String contentType, long size, String storageKey) {
         this.review = review;
-        this.fileName = fileName;
+        this.originalFileName = originalFileName;
         this.contentType = contentType;
-        this.size = content.length;
-        this.content = content.clone();
+        this.size = size;
+        this.storageKey = storageKey;
     }
 }

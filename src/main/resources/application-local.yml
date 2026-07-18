@@ -13,3 +13,10 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+attachment:
+  storage:
+    type: memory
