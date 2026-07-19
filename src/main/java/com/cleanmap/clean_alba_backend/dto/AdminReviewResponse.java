@@ -3,7 +3,8 @@ package com.cleanmap.clean_alba_backend.dto;
 import com.cleanmap.clean_alba_backend.domain.Review;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 public record AdminReviewResponse(
@@ -25,7 +26,8 @@ public record AdminReviewResponse(
         Integer coworkerCount,
         String content,
         ReviewStatus status,
-        LocalDateTime createdAt,
+        OffsetDateTime createdAt,
+        OffsetDateTime updatedAt,
         long attachmentCount,
         List<AdminReviewAttachmentResponse> attachments
 ) {
@@ -64,7 +66,8 @@ public record AdminReviewResponse(
                 review.getCoworkerCount(),
                 review.getContent(),
                 review.getStatus(),
-                review.getCreatedAt(),
+                review.getCreatedAt().atOffset(ZoneOffset.UTC),
+                review.getUpdatedAt().atOffset(ZoneOffset.UTC),
                 attachmentCount,
                 List.copyOf(attachments)
         );

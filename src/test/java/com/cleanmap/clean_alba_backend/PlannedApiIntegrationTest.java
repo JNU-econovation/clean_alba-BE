@@ -16,6 +16,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -200,8 +202,14 @@ class PlannedApiIntegrationTest {
         }
         assertNotNull(queuedReview);
         assertEquals(1, queuedReview.path("attachmentCount").asInt());
+        assertUtcTimestamp(queuedReview.path("createdAt").asString());
+        assertUtcTimestamp(queuedReview.path("updatedAt").asString());
         assertEquals(200, detail.statusCode());
         JsonNode detailBody = objectMapper.readTree(detail.body());
+        assertEquals(queuedReview.path("createdAt").asString(), detailBody.path("createdAt").asString());
+        assertEquals(queuedReview.path("updatedAt").asString(), detailBody.path("updatedAt").asString());
+        assertUtcTimestamp(detailBody.path("createdAt").asString());
+        assertUtcTimestamp(detailBody.path("updatedAt").asString());
         attachmentId = detailBody.path("attachments").get(0).path("attachmentId").asLong();
         assertEquals("proof.pdf", detailBody.path("attachments").get(0).path("fileName").asString());
         assertEquals("application/pdf", detailBody.path("attachments").get(0).path("contentType").asString());
@@ -419,6 +427,11 @@ class PlannedApiIntegrationTest {
             builder.method(method, HttpRequest.BodyPublishers.ofString(body));
         }
         return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private void assertUtcTimestamp(String timestamp) {
+        assertTrue(timestamp.endsWith("Z"));
+        assertEquals(ZoneOffset.UTC, OffsetDateTime.parse(timestamp).getOffset());
     }
 
     private HttpResponse<String> multipart(

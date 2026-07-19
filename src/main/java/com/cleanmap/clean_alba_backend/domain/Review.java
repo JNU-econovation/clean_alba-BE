@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import com.cleanmap.clean_alba_backend.dto.ReviewCreateRequest;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,7 +79,7 @@ public class Review {
     private String authorEmail;                // 작성자 (카카오 이메일)
 
     @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneOffset.UTC);
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = createdAt;
@@ -108,7 +109,7 @@ public class Review {
 
     @PreUpdate
     private void touchUpdatedAt() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public void moderate(ReviewStatus newStatus) {
