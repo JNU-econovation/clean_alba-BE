@@ -17,6 +17,7 @@ import com.cleanmap.clean_alba_backend.storage.AttachmentStorage;
 import com.cleanmap.clean_alba_backend.storage.AttachmentStorageException;
 import com.cleanmap.clean_alba_backend.storage.AttachmentStorageObjectNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,11 +46,22 @@ public class AdminReviewService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상, size는 1~50이어야 합니다.");
         }
         ReviewStatus status = parseStatus(statusValue);
+        Page<Review> reviews = reviewRepository.findByStatusOrderByCreatedAtDescReviewIdDesc(
+                status, PageRequest.of(page, size)
+        );
+        List<Long> reviewIds = reviews.getContent().stream().map(Review::getReviewId).toList();
+        Map<Long, Long> attachmentCounts = reviewIds.isEmpty()
+                ? Map.of()
+                : reviewAttachmentRepository.countByReviewIds(reviewIds).stream()
+                        .collect(Collectors.toMap(
+                                ReviewAttachmentRepository.ReviewAttachmentCount::getReviewId,
+                                ReviewAttachmentRepository.ReviewAttachmentCount::getAttachmentCount
+                        ));
         return PagedResponse.from(
-                reviewRepository.findByStatusOrderByCreatedAtDescReviewIdDesc(
-                        status, PageRequest.of(page, size)
-                ),
-                AdminReviewResponse::from
+                reviews,
+                review -> AdminReviewResponse.from(
+                        review, attachmentCounts.getOrDefault(review.getReviewId(), 0L)
+                )
         );
     }
 

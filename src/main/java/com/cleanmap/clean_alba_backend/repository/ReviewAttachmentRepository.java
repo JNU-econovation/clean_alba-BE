@@ -15,6 +15,16 @@ public interface ReviewAttachmentRepository extends JpaRepository<ReviewAttachme
 
     long countByReview_ReviewId(Long reviewId);
 
+    @Query("SELECT a.review.reviewId AS reviewId, COUNT(a) AS attachmentCount "
+            + "FROM ReviewAttachment a WHERE a.review.reviewId IN :reviewIds GROUP BY a.review.reviewId")
+    List<ReviewAttachmentCount> countByReviewIds(@Param("reviewIds") List<Long> reviewIds);
+
+    interface ReviewAttachmentCount {
+        Long getReviewId();
+
+        long getAttachmentCount();
+    }
+
     long countByReview_AuthorEmail(String authorEmail);
 
     @Query("SELECT COALESCE(SUM(a.size), 0) FROM ReviewAttachment a WHERE a.review.authorEmail = :authorEmail")

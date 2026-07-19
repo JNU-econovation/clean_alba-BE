@@ -17,6 +17,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(
@@ -186,6 +187,15 @@ class PlannedApiIntegrationTest {
         // Then: queue, detail, and one-way moderation all succeed
         assertEquals(200, queue.statusCode());
         assertTrue(queue.body().contains("\"reviewId\":" + reviewId));
+        JsonNode queueContent = objectMapper.readTree(queue.body()).path("content");
+        JsonNode queuedReview = null;
+        for (int i = 0; i < queueContent.size(); i++) {
+            if (queueContent.get(i).path("reviewId").asLong() == reviewId) {
+                queuedReview = queueContent.get(i);
+            }
+        }
+        assertNotNull(queuedReview);
+        assertEquals(1, queuedReview.path("attachmentCount").asInt());
         assertEquals(200, detail.statusCode());
         JsonNode detailBody = objectMapper.readTree(detail.body());
         attachmentId = detailBody.path("attachments").get(0).path("attachmentId").asLong();

@@ -23,14 +23,23 @@ public record AdminReviewResponse(
         String content,
         ReviewStatus status,
         LocalDateTime createdAt,
+        long attachmentCount,
         List<AdminReviewAttachmentResponse> attachments
 ) {
-    public static AdminReviewResponse from(Review review) {
-        return from(review, List.of());
+    public static AdminReviewResponse from(Review review, long attachmentCount) {
+        return from(review, attachmentCount, List.of());
     }
 
     public static AdminReviewResponse from(
             Review review,
+            List<AdminReviewAttachmentResponse> attachments
+    ) {
+        return from(review, attachments.size(), attachments);
+    }
+
+    private static AdminReviewResponse from(
+            Review review,
+            long attachmentCount,
             List<AdminReviewAttachmentResponse> attachments
     ) {
         return new AdminReviewResponse(
@@ -50,6 +59,7 @@ public record AdminReviewResponse(
                 review.getContent(),
                 review.getStatus(),
                 review.getCreatedAt(),
+                attachmentCount,
                 List.copyOf(attachments)
         );
     }
