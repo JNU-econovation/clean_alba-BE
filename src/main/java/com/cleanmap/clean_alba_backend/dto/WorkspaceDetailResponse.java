@@ -20,6 +20,7 @@ public record WorkspaceDetailResponse(
         List<ChecklistStatResponse> checklistStats,
         ReviewSentimentStatsResponse reviewSentimentStats,
         ReviewSentiment dominantReviewSentiment,
+        List<SimultaneousWorkerStatResponse> simultaneousWorkerStats,
         List<PublicReviewResponse> reviews
 ) {
 }

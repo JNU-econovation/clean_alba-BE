@@ -3,6 +3,8 @@ package com.cleanmap.clean_alba_backend.service;
 import com.cleanmap.clean_alba_backend.domain.Review;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
 import com.cleanmap.clean_alba_backend.domain.ReviewSentiment;
+import com.cleanmap.clean_alba_backend.domain.DayType;
+import com.cleanmap.clean_alba_backend.domain.TimeSlot;
 import com.cleanmap.clean_alba_backend.domain.Workspace;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import com.cleanmap.clean_alba_backend.dto.KakaoPlace;
@@ -18,6 +20,7 @@ import com.cleanmap.clean_alba_backend.dto.WorkspaceDetailResponse;
 import com.cleanmap.clean_alba_backend.dto.ChecklistStatResponse;
 import com.cleanmap.clean_alba_backend.dto.PublicReviewResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewSentimentStatsResponse;
+import com.cleanmap.clean_alba_backend.dto.SimultaneousWorkerStatResponse;
 import com.cleanmap.clean_alba_backend.repository.ReviewRepository;
 import com.cleanmap.clean_alba_backend.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
@@ -112,6 +115,7 @@ public class WorkspaceService {
                 base.latitude(), base.longitude(), base.cleanScore(), base.status(),
                 reviews.size(), checklistStats(reviews),
                 sentimentStats, sentimentStats.dominantSentiment(),
+                simultaneousWorkerStats(reviews),
                 reviews.stream().map(PublicReviewResponse::from).toList()
         );
     }
@@ -255,6 +259,27 @@ public class WorkspaceService {
 
     private ReviewSentimentStatsResponse sentimentStats(List<Review> approvedReviews) {
         return ReviewSentimentStatsResponse.from(approvedReviews);
+    }
+
+    private List<SimultaneousWorkerStatResponse> simultaneousWorkerStats(List<Review> approvedReviews) {
+        List<SimultaneousWorkerStatResponse> stats = new ArrayList<>();
+        for (DayType dayType : DayType.values()) {
+            for (TimeSlot timeSlot : TimeSlot.values()) {
+                List<Review> matchingReviews = approvedReviews.stream()
+                        .filter(review -> review.getDayType() == dayType)
+                        .filter(review -> review.getTimeSlot() == timeSlot)
+                        .filter(review -> review.getCoworkerCount() != null)
+                        .toList();
+                if (!matchingReviews.isEmpty()) {
+                    stats.add(new SimultaneousWorkerStatResponse(
+                            dayType,
+                            timeSlot,
+                            matchingReviews.stream().mapToInt(Review::getCoworkerCount).average().orElseThrow(),
+                            matchingReviews.size()));
+                }
+            }
+        }
+        return List.copyOf(stats);
     }
 
     private List<ChecklistStatResponse> checklistStats(List<Review> reviews) {
