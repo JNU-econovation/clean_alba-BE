@@ -136,7 +136,7 @@ public class AdminReviewService {
         if (content == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
         }
-        Review review = reviewRepository.findById(reviewId)
+        Review review = reviewRepository.findByIdForUpdate(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found."));
         review.updateContent(content);
         reviewRepository.saveAndFlush(review);
