@@ -9,6 +9,7 @@ import com.cleanmap.clean_alba_backend.dto.AdminReviewResponse;
 import com.cleanmap.clean_alba_backend.dto.AdminReviewAttachmentResponse;
 import com.cleanmap.clean_alba_backend.dto.AdminStatsResponse;
 import com.cleanmap.clean_alba_backend.dto.PagedResponse;
+import com.cleanmap.clean_alba_backend.dto.ReviewContentUpdateResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateResponse;
 import com.cleanmap.clean_alba_backend.repository.ReviewRepository;
 import com.cleanmap.clean_alba_backend.repository.ReviewAttachmentRepository;
@@ -128,6 +129,18 @@ public class AdminReviewService {
         Integer displayScore = cleanScore == null ? null : (int) Math.round(cleanScore);
         WorkspaceStatus workspaceStatus = displayScore == null ? null : WorkspaceStatus.fromScore(displayScore);
         return new ReviewStatusUpdateResponse(reviewId, review.getStatus(), displayScore, workspaceStatus);
+    }
+
+    @Transactional
+    public ReviewContentUpdateResponse updateContent(Long reviewId, String content) {
+        if (content == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content는 필수입니다.");
+        }
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found."));
+        review.updateContent(content);
+        reviewRepository.saveAndFlush(review);
+        return new ReviewContentUpdateResponse(review.getReviewId(), review.getContent(), review.getUpdatedAt());
     }
 
     @Transactional(readOnly = true)

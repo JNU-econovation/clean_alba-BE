@@ -3,6 +3,7 @@ package com.cleanmap.clean_alba_backend;
 import com.cleanmap.clean_alba_backend.util.JwtUtil;
 import com.cleanmap.clean_alba_backend.repository.WorkspaceRepository;
 import com.cleanmap.clean_alba_backend.repository.ReviewAttachmentRepository;
+import com.cleanmap.clean_alba_backend.repository.ReviewRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +47,9 @@ class PlannedApiIntegrationTest {
 
     @Autowired
     private ReviewAttachmentRepository reviewAttachmentRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -243,6 +247,128 @@ class PlannedApiIntegrationTest {
         assertEquals(403, recalculateAsUser.statusCode());
         assertEquals(200, recalculateAsAdmin.statusCode());
         assertEquals(88, objectMapper.readTree(recalculateAsAdmin.body()).path("cleanScore").asInt());
+    }
+
+    @Test
+    void adminEditsSubjectiveReviewContentOnly() throws Exception {
+        // Given: a dedicated workspace with a pending review that has content and a violation
+        String userToken = jwtUtil.generateToken("content-editor-user@example.com", 2L);
+        String adminToken = jwtUtil.generateToken("admin@example.com", 1L);
+        HttpResponse<String> workspaceCreated = request("POST", "/workspaces", """
+                {
+                  "name": "후기수정 테스트 매장",
+                  "address": "광주광역시 북구 수정로 1",
+                  "category": "카페",
+                  "district": "전대후문",
+                  "latitude": 35.2000000,
+                  "longitude": 126.2000000
+                }
+                """, adminToken);
+        long workspaceId = objectMapper.readTree(workspaceCreated.body()).path("workspaceId").asLong();
+        HttpResponse<String> created = request("POST", "/workspaces/" + workspaceId + "/reviews", """
+                {
+                  "contractViolation": false,
+                  "minimumWageViolation": false,
+                  "weeklyAllowanceViolation": false,
+                  "breakTimeViolation": true,
+                  "wageDelayViolation": false,
+                  "scheduleChangeViolation": false,
+                  "substituteCoercionViolation": false,
+                  "overtimePayViolation": false,
+                  "coworkerCount": 2,
+                  "content": "원본 후기입니다.",
+                  "dayType": "weekday",
+                  "timeSlot": "morning"
+                }
+                """, userToken);
+        assertEquals(201, created.statusCode());
+        long reviewId = objectMapper.readTree(created.body()).path("reviewId").asLong();
+
+        // When/Then: authentication, authorization, and input validation guard the route
+        assertEquals(401, request("PATCH", "/admin/reviews/" + reviewId + "/content",
+                "{\"content\":\"수정\"}", null).statusCode());
+        assertEquals(403, request("PATCH", "/admin/reviews/" + reviewId + "/content",
+                "{\"content\":\"수정\"}", userToken).statusCode());
+        assertEquals(404, request("PATCH", "/admin/reviews/" + (reviewId + 9999) + "/content",
+                "{\"content\":\"수정\"}", adminToken).statusCode());
+        assertEquals(400, request("PATCH", "/admin/reviews/" + reviewId + "/content",
+                "{}", adminToken).statusCode());
+        assertEquals(400, request("PATCH", "/admin/reviews/" + reviewId + "/content",
+                "{\"content\":null}", adminToken).statusCode());
+
+        // When: an administrator edits the content with surrounding whitespace
+        HttpResponse<String> updated = request("PATCH", "/admin/reviews/" + reviewId + "/content",
+                "{\"content\":\"  관리자가 수정한 후기 내용  \"}", adminToken);
+
+        // Then: the trimmed content and updatedAt are returned and persisted
+        assertEquals(200, updated.statusCode());
+        JsonNode updatedBody = objectMapper.readTree(updated.body());
+        assertEquals(reviewId, updatedBody.path("reviewId").asLong());
+        assertEquals("관리자가 수정한 후기 내용", updatedBody.path("content").asString());
+        assertTrue(!updatedBody.path("updatedAt").asString().isBlank());
+        var storedReview = reviewRepository.findById(reviewId).orElseThrow();
+        assertEquals("관리자가 수정한 후기 내용", storedReview.getContent());
+        assertTrue(!storedReview.getUpdatedAt().isBefore(storedReview.getCreatedAt()));
+
+        // Then: only the subjective content changed - other fields stay intact
+        JsonNode adminDetail = objectMapper.readTree(
+                request("GET", "/admin/reviews/" + reviewId, null, adminToken).body());
+        assertEquals(true, adminDetail.path("breakTimeViolation").asBoolean());
+        assertEquals(2, adminDetail.path("coworkerCount").asInt());
+        assertEquals("PENDING", adminDetail.path("status").asString());
+        assertEquals("kakao:2", adminDetail.path("authorEmail").asString());
+
+        // When: an administrator sends a blank content
+        HttpResponse<String> blanked = request("PATCH", "/admin/reviews/" + reviewId + "/content",
+                "{\"content\":\"   \"}", adminToken);
+
+        // Then: the content is stored as null
+        assertEquals(200, blanked.statusCode());
+        assertTrue(objectMapper.readTree(blanked.body()).path("content").isNull());
+        assertEquals(null, reviewRepository.findById(reviewId).orElseThrow().getContent());
+
+        // When: the review is approved and its content is edited afterwards
+        assertEquals(200, request("PATCH", "/admin/reviews/" + reviewId + "/status",
+                "{\"status\":\"APPROVED\"}", adminToken).statusCode());
+        HttpResponse<String> editedAfterApproval = request("PATCH", "/admin/reviews/" + reviewId + "/content",
+                "{\"content\":\"승인 후 수정된 후기\"}", adminToken);
+
+        // Then: the edit succeeds, the public detail reflects it, and the score stays put
+        assertEquals(200, editedAfterApproval.statusCode());
+        JsonNode publicDetail = objectMapper.readTree(
+                request("GET", "/workspaces/" + workspaceId, null, null).body());
+        assertEquals("승인 후 수정된 후기", publicDetail.path("reviews").get(0).path("content").asString());
+        assertEquals(88, publicDetail.path("cleanScore").asInt());
+
+        // When: a separate review is rejected, then its content is edited
+        HttpResponse<String> rejectedReviewCreated = request("POST", "/workspaces/" + workspaceId + "/reviews", """
+                {
+                  "contractViolation": false,
+                  "minimumWageViolation": false,
+                  "weeklyAllowanceViolation": false,
+                  "breakTimeViolation": false,
+                  "wageDelayViolation": false,
+                  "scheduleChangeViolation": false,
+                  "substituteCoercionViolation": false,
+                  "overtimePayViolation": false,
+                  "coworkerCount": 1,
+                  "content": "반려 전 후기",
+                  "dayType": "weekday",
+                  "timeSlot": "afternoon"
+                }
+                """, userToken);
+        long rejectedReviewId = objectMapper.readTree(rejectedReviewCreated.body()).path("reviewId").asLong();
+        assertEquals(200, request("PATCH", "/admin/reviews/" + rejectedReviewId + "/status",
+                "{\"status\":\"REJECTED\"}", adminToken).statusCode());
+
+        HttpResponse<String> editedAfterRejection = request("PATCH", "/admin/reviews/" + rejectedReviewId + "/content",
+                "{\"content\":\"반려 후 수정된 후기\"}", adminToken);
+
+        // Then: rejected reviews are editable without changing the approved review score
+        assertEquals(200, editedAfterRejection.statusCode());
+        assertEquals("반려 후 수정된 후기", objectMapper.readTree(editedAfterRejection.body()).path("content").asString());
+        assertEquals(88, objectMapper.readTree(
+                request("GET", "/workspaces/" + workspaceId, null, null).body()).path("cleanScore").asInt());
     }
 
     @Test

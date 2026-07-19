@@ -80,6 +80,9 @@ public class Review {
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = createdAt;
+
     public Review(Workspace workspace, ReviewCreateRequest request, String authorEmail) {
         this.workspace = workspace;
         this.contractViolation = request.contractViolation();
@@ -95,6 +98,17 @@ public class Review {
         this.dayType = request.dayType();
         this.timeSlot = request.timeSlot();
         this.authorEmail = authorEmail;
+    }
+
+    /** 관리자용 주관식 후기 수정. 앞뒤 공백을 제거하고 빈 문자열은 null로 저장한다. */
+    public void updateContent(String content) {
+        String normalized = content.trim();
+        this.content = normalized.isEmpty() ? null : normalized;
+    }
+
+    @PreUpdate
+    private void touchUpdatedAt() {
+        updatedAt = LocalDateTime.now();
     }
 
     public void moderate(ReviewStatus newStatus) {

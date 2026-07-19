@@ -3,6 +3,8 @@ package com.cleanmap.clean_alba_backend.controller;
 import com.cleanmap.clean_alba_backend.dto.AdminReviewResponse;
 import com.cleanmap.clean_alba_backend.dto.AdminStatsResponse;
 import com.cleanmap.clean_alba_backend.dto.PagedResponse;
+import com.cleanmap.clean_alba_backend.dto.ReviewContentUpdateRequest;
+import com.cleanmap.clean_alba_backend.dto.ReviewContentUpdateResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateRequest;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateResponse;
 import com.cleanmap.clean_alba_backend.domain.ReviewAttachment;
@@ -94,6 +96,16 @@ public class AdminReviewController {
     ) {
         authService.requireAdmin(authorizationHeader);
         return adminReviewService.updateStatus(reviewId, request.status());
+    }
+
+    @PatchMapping("/reviews/{reviewId}/content")
+    public ReviewContentUpdateResponse updateContent(
+            @PathVariable Long reviewId,
+            @RequestBody ReviewContentUpdateRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        authService.requireAdmin(authorizationHeader);
+        return adminReviewService.updateContent(reviewId, request.content());
     }
 
     @GetMapping("/stats")
