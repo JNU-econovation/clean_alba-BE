@@ -1,6 +1,7 @@
 package com.cleanmap.clean_alba_backend.config;
 
 import com.cleanmap.clean_alba_backend.domain.Review;
+import com.cleanmap.clean_alba_backend.domain.ReviewSentiment;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
 import com.cleanmap.clean_alba_backend.domain.Workspace;
 import com.cleanmap.clean_alba_backend.dto.ReviewCreateRequest;
@@ -95,6 +96,7 @@ public class RealDataSeeder implements ApplicationRunner {
                 if (!reviewRepository.existsByWorkspace_WorkspaceIdAndAuthorEmail(
                         workspace.getWorkspaceId(), seedReview.authorKey())) {
                     Review review = new Review(workspace, seedReview.request(), seedReview.authorKey());
+                    review.updateSentiment(seedSentiment(seedReview.authorKey()));
                     review.moderate(ReviewStatus.APPROVED);
                     reviewRepository.save(review);
                 }
@@ -115,5 +117,24 @@ public class RealDataSeeder implements ApplicationRunner {
     }
 
     private record SeedReview(String authorKey, ReviewCreateRequest request) {
+    }
+
+    private static ReviewSentiment seedSentiment(String authorKey) {
+        return switch (authorKey) {
+            case "seed:real-data:topdog:1",
+                 "seed:real-data:dessert39:1",
+                 "seed:real-data:theventi:1",
+                 "seed:real-data:theventi:4",
+                 "seed:real-data:pascucci:1",
+                 "seed:real-data:pascucci:2",
+                 "seed:real-data:pascucci:5" -> ReviewSentiment.POSITIVE;
+            case "seed:real-data:dessert39:2",
+                 "seed:real-data:theventi:2" -> ReviewSentiment.NEUTRAL;
+            case "seed:real-data:theventi:3",
+                 "seed:real-data:pascucci:3",
+                 "seed:real-data:pascucci:4",
+                 "seed:real-data:pascucci:6" -> ReviewSentiment.NEGATIVE;
+            default -> throw new IllegalArgumentException("Unknown seed review author key: " + authorKey);
+        };
     }
 }
