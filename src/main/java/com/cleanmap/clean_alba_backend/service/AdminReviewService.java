@@ -1,6 +1,7 @@
 package com.cleanmap.clean_alba_backend.service;
 
 import com.cleanmap.clean_alba_backend.domain.Review;
+import com.cleanmap.clean_alba_backend.domain.ReviewSentiment;
 import com.cleanmap.clean_alba_backend.domain.ReviewAttachment;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
 import com.cleanmap.clean_alba_backend.domain.Workspace;
@@ -10,6 +11,7 @@ import com.cleanmap.clean_alba_backend.dto.AdminReviewAttachmentResponse;
 import com.cleanmap.clean_alba_backend.dto.AdminStatsResponse;
 import com.cleanmap.clean_alba_backend.dto.PagedResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewContentUpdateResponse;
+import com.cleanmap.clean_alba_backend.dto.ReviewSentimentUpdateResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateResponse;
 import com.cleanmap.clean_alba_backend.repository.ReviewRepository;
 import com.cleanmap.clean_alba_backend.repository.ReviewAttachmentRepository;
@@ -141,6 +143,18 @@ public class AdminReviewService {
         review.updateContent(content);
         reviewRepository.saveAndFlush(review);
         return new ReviewContentUpdateResponse(review.getReviewId(), review.getContent(), review.getUpdatedAt());
+    }
+
+    @Transactional
+    public ReviewSentimentUpdateResponse updateSentiment(Long reviewId, ReviewSentiment sentiment) {
+        if (sentiment == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sentiment는 필수입니다.");
+        }
+        Review review = reviewRepository.findByIdForUpdate(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found."));
+        review.updateSentiment(sentiment);
+        reviewRepository.saveAndFlush(review);
+        return new ReviewSentimentUpdateResponse(review.getReviewId(), review.getSentiment(), review.getUpdatedAt());
     }
 
     @Transactional(readOnly = true)

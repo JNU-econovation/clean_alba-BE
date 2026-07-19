@@ -2,6 +2,7 @@ package com.cleanmap.clean_alba_backend.dto;
 
 import com.cleanmap.clean_alba_backend.domain.Workspace;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
+import com.cleanmap.clean_alba_backend.domain.ReviewSentiment;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -18,7 +19,9 @@ public record WorkspaceSummaryResponse(
     WorkspaceStatus status,
     long reviewCount,
     List<ChecklistStatResponse> checklistStats,
-    String reviewSummary
+    String reviewSummary,
+    ReviewSentimentStatsResponse reviewSentimentStats,
+    ReviewSentiment dominantReviewSentiment
 ) {
     /** 엔티티를 외부 응답으로 변환하면서 점수 반올림과 상태 판정을 수행한다. */
     public static WorkspaceSummaryResponse from(Workspace workspace) {
@@ -37,6 +40,8 @@ public record WorkspaceSummaryResponse(
             status,
             0,
             List.of(),
+            null,
+            new ReviewSentimentStatsResponse(0, 0, 0, 0, 0, 0),
             null
         );
     }

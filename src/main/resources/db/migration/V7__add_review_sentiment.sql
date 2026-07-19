@@ -1,0 +1,1 @@
+ALTER TABLE reviews ADD COLUMN sentiment VARCHAR(255) NULL;

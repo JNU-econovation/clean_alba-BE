@@ -5,6 +5,8 @@ import com.cleanmap.clean_alba_backend.dto.AdminStatsResponse;
 import com.cleanmap.clean_alba_backend.dto.PagedResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewContentUpdateRequest;
 import com.cleanmap.clean_alba_backend.dto.ReviewContentUpdateResponse;
+import com.cleanmap.clean_alba_backend.dto.ReviewSentimentUpdateRequest;
+import com.cleanmap.clean_alba_backend.dto.ReviewSentimentUpdateResponse;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateRequest;
 import com.cleanmap.clean_alba_backend.dto.ReviewStatusUpdateResponse;
 import com.cleanmap.clean_alba_backend.domain.ReviewAttachment;
@@ -106,6 +108,16 @@ public class AdminReviewController {
     ) {
         authService.requireAdmin(authorizationHeader);
         return adminReviewService.updateContent(reviewId, request.content());
+    }
+
+    @PatchMapping("/reviews/{reviewId}/sentiment")
+    public ReviewSentimentUpdateResponse updateSentiment(
+            @PathVariable Long reviewId,
+            @RequestBody ReviewSentimentUpdateRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        authService.requireAdmin(authorizationHeader);
+        return adminReviewService.updateSentiment(reviewId, request.sentiment());
     }
 
     @GetMapping("/stats")

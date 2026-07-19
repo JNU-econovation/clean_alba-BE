@@ -71,6 +71,9 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String content;                    // 주관식 자유 후기
 
+    @Enumerated(EnumType.STRING)
+    private ReviewSentiment sentiment;
+
     // ── 메타 ──
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -105,6 +108,10 @@ public class Review {
     public void updateContent(String content) {
         String normalized = content.trim();
         this.content = normalized.isEmpty() ? null : normalized;
+    }
+
+    public void updateSentiment(ReviewSentiment sentiment) {
+        this.sentiment = sentiment;
     }
 
     @PreUpdate

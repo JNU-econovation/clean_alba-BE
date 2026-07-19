@@ -2,6 +2,7 @@ package com.cleanmap.clean_alba_backend.service;
 
 import com.cleanmap.clean_alba_backend.domain.Review;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
+import com.cleanmap.clean_alba_backend.domain.ReviewSentiment;
 import com.cleanmap.clean_alba_backend.domain.Workspace;
 import com.cleanmap.clean_alba_backend.domain.WorkspaceStatus;
 import com.cleanmap.clean_alba_backend.dto.KakaoPlace;
@@ -16,6 +17,7 @@ import com.cleanmap.clean_alba_backend.dto.WorkspaceSummaryResponse;
 import com.cleanmap.clean_alba_backend.dto.WorkspaceDetailResponse;
 import com.cleanmap.clean_alba_backend.dto.ChecklistStatResponse;
 import com.cleanmap.clean_alba_backend.dto.PublicReviewResponse;
+import com.cleanmap.clean_alba_backend.dto.ReviewSentimentStatsResponse;
 import com.cleanmap.clean_alba_backend.repository.ReviewRepository;
 import com.cleanmap.clean_alba_backend.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +57,8 @@ public class WorkspaceService {
         List<Workspace> workspaces = workspaceRepository.search(minScore, maxScore, normalizedKeyword);
 
         return workspaces.stream()
-                .map(WorkspaceListResponse::from)
+                .map(workspace -> WorkspaceListResponse.from(
+                        workspace, sentimentStats(approvedReviews(workspace.getWorkspaceId())).dominantSentiment()))
                 .toList();
     }
 
@@ -74,7 +77,10 @@ public class WorkspaceService {
 
         return new WorkspaceNlSearchResponse(
                 filter,
-                workspaces.stream().map(WorkspaceListResponse::from).toList());
+                workspaces.stream()
+                        .map(workspace -> WorkspaceListResponse.from(
+                                workspace, sentimentStats(approvedReviews(workspace.getWorkspaceId())).dominantSentiment()))
+                        .toList());
     }
 
     @Transactional(readOnly = true)
@@ -84,10 +90,12 @@ public class WorkspaceService {
                         HttpStatus.NOT_FOUND, "Workspace not found."));
         List<Review> reviews = approvedReviews(workspaceId);
         WorkspaceSummaryResponse base = WorkspaceSummaryResponse.from(workspace);
+        ReviewSentimentStatsResponse sentimentStats = sentimentStats(reviews);
         return new WorkspaceSummaryResponse(
                 base.workspaceId(), base.name(), base.address(), base.category(), base.district(),
                 base.latitude(), base.longitude(), base.cleanScore(), base.status(),
-                reviews.size(), checklistStats(reviews), reviewSummary(reviews)
+                reviews.size(), checklistStats(reviews), reviewSummary(reviews),
+                sentimentStats, sentimentStats.dominantSentiment()
         );
     }
 
@@ -98,10 +106,12 @@ public class WorkspaceService {
                         HttpStatus.NOT_FOUND, "Workspace not found."));
         List<Review> reviews = approvedReviews(workspaceId);
         WorkspaceSummaryResponse base = WorkspaceSummaryResponse.from(workspace);
+        ReviewSentimentStatsResponse sentimentStats = sentimentStats(reviews);
         return new WorkspaceDetailResponse(
                 base.workspaceId(), base.name(), base.address(), base.category(), base.district(),
                 base.latitude(), base.longitude(), base.cleanScore(), base.status(),
                 reviews.size(), checklistStats(reviews),
+                sentimentStats, sentimentStats.dominantSentiment(),
                 reviews.stream().map(PublicReviewResponse::from).toList()
         );
     }
@@ -223,10 +233,12 @@ public class WorkspaceService {
 
         workspace.updateCleanScore(cleanScore);
         WorkspaceSummaryResponse base = WorkspaceSummaryResponse.from(workspace);
+        ReviewSentimentStatsResponse sentimentStats = sentimentStats(approved);
         return new WorkspaceSummaryResponse(
                 base.workspaceId(), base.name(), base.address(), base.category(), base.district(),
                 base.latitude(), base.longitude(), base.cleanScore(), base.status(),
-                approved.size(), checklistStats(approved), reviewSummary(approved)
+                approved.size(), checklistStats(approved), reviewSummary(approved),
+                sentimentStats, sentimentStats.dominantSentiment()
         );
     }
 
@@ -239,6 +251,10 @@ public class WorkspaceService {
 
     private List<Review> approvedReviews(Long workspaceId) {
         return reviewRepository.findByWorkspace_WorkspaceIdAndStatus(workspaceId, ReviewStatus.APPROVED);
+    }
+
+    private ReviewSentimentStatsResponse sentimentStats(List<Review> approvedReviews) {
+        return ReviewSentimentStatsResponse.from(approvedReviews);
     }
 
     private List<ChecklistStatResponse> checklistStats(List<Review> reviews) {
