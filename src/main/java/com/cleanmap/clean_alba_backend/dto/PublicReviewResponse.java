@@ -1,6 +1,8 @@
 package com.cleanmap.clean_alba_backend.dto;
 
+import com.cleanmap.clean_alba_backend.domain.DayType;
 import com.cleanmap.clean_alba_backend.domain.Review;
+import com.cleanmap.clean_alba_backend.domain.TimeSlot;
 
 import java.time.LocalDateTime;
 
@@ -15,6 +17,8 @@ public record PublicReviewResponse(
         boolean substituteCoercionViolation,
         boolean overtimePayViolation,
         Integer coworkerCount,
+        DayType dayType,
+        TimeSlot timeSlot,
         String content,
         LocalDateTime createdAt
 ) {
@@ -30,6 +34,8 @@ public record PublicReviewResponse(
                 review.isSubstituteCoercionViolation(),
                 review.isOvertimePayViolation(),
                 review.getCoworkerCount(),
+                review.getDayType(),
+                review.getTimeSlot(),
                 review.getContent(),
                 review.getCreatedAt()
         );
