@@ -100,6 +100,14 @@ public class ReviewService {
             try {
                 storageKey = attachmentStorage.store(reviewId, safeName, file.getContentType(), content);
             } catch (AttachmentStorageException exception) {
+                log.error(
+                        "인증자료 업로드 실패: reviewId={}, filename={}, contentType={}, size={}",
+                        reviewId,
+                        file.getOriginalFilename(),
+                        file.getContentType(),
+                        file.getSize(),
+                        exception
+                    );
                 throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "인증자료 저장소에 업로드할 수 없습니다.");
             }
             ReviewAttachment attachment;
