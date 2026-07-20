@@ -1,5 +1,10 @@
 package com.cleanmap.clean_alba_backend;
 
+import com.cleanmap.clean_alba_backend.domain.Review;
+import com.cleanmap.clean_alba_backend.domain.ReviewSentiment;
+import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
+import com.cleanmap.clean_alba_backend.domain.Workspace;
+import com.cleanmap.clean_alba_backend.dto.ReviewCreateRequest;
 import com.cleanmap.clean_alba_backend.util.JwtUtil;
 import com.cleanmap.clean_alba_backend.repository.WorkspaceRepository;
 import com.cleanmap.clean_alba_backend.repository.ReviewAttachmentRepository;
@@ -16,6 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
@@ -380,6 +386,122 @@ class PlannedApiIntegrationTest {
     }
 
     @Test
+    void adminUpdatesReviewSentimentAndWorkspaceResponsesAggregateApprovedReviews() throws Exception {
+        String adminToken = jwtUtil.generateToken("admin@example.com", 1L);
+        String userToken = jwtUtil.generateToken("sentiment-user@example.com", 2L);
+        HttpResponse<String> workspaceCreated = request("POST", "/workspaces", """
+                {
+                  "name": "sentiment-stats-workspace",
+                  "address": "광주광역시 북구 분위기로 1",
+                  "category": "카페",
+                  "district": "전대후문",
+                  "latitude": 35.2100000,
+                  "longitude": 126.2100000
+                }
+                """, adminToken);
+        assertEquals(201, workspaceCreated.statusCode());
+        long workspaceId = objectMapper.readTree(workspaceCreated.body()).path("workspaceId").asLong();
+        Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow();
+        Review editableReview = reviewRepository.saveAndFlush(new Review(workspace, reviewRequest("original content"), "kakao:2"));
+        LocalDateTime previousUpdatedAt = editableReview.getUpdatedAt();
+
+        assertEquals(401, request("PATCH", "/admin/reviews/" + editableReview.getReviewId() + "/sentiment",
+                "{\"sentiment\":\"POSITIVE\"}", null).statusCode());
+        assertEquals(403, request("PATCH", "/admin/reviews/" + editableReview.getReviewId() + "/sentiment",
+                "{\"sentiment\":\"POSITIVE\"}", userToken).statusCode());
+        assertEquals(404, request("PATCH", "/admin/reviews/999999/sentiment",
+                "{\"sentiment\":\"POSITIVE\"}", adminToken).statusCode());
+        assertEquals(400, request("PATCH", "/admin/reviews/" + editableReview.getReviewId() + "/sentiment",
+                "{}", adminToken).statusCode());
+        assertEquals(400, request("PATCH", "/admin/reviews/" + editableReview.getReviewId() + "/sentiment",
+                "{\"sentiment\":null}", adminToken).statusCode());
+        assertEquals(400, request("PATCH", "/admin/reviews/" + editableReview.getReviewId() + "/sentiment",
+                "{\"sentiment\":\"UNKNOWN\"}", adminToken).statusCode());
+
+        HttpResponse<String> updated = request("PATCH", "/admin/reviews/" + editableReview.getReviewId() + "/sentiment",
+                "{\"sentiment\":\"POSITIVE\"}", adminToken);
+        assertEquals(200, updated.statusCode());
+        JsonNode updatedBody = objectMapper.readTree(updated.body());
+        assertEquals(editableReview.getReviewId(), updatedBody.path("reviewId").asLong());
+        assertEquals("POSITIVE", updatedBody.path("sentiment").asString());
+        assertTrue(!updatedBody.path("updatedAt").asString().isBlank());
+        Review storedEditableReview = reviewRepository.findById(editableReview.getReviewId()).orElseThrow();
+        assertEquals(ReviewSentiment.POSITIVE, storedEditableReview.getSentiment());
+        assertTrue(storedEditableReview.getUpdatedAt().isAfter(previousUpdatedAt));
+        assertEquals("original content", storedEditableReview.getContent());
+        assertEquals(ReviewStatus.PENDING, storedEditableReview.getStatus());
+        assertEquals(0, storedEditableReview.getCoworkerCount());
+
+        HttpResponse<String> reviewDetail = request(
+                "GET", "/admin/reviews/" + editableReview.getReviewId(), null, adminToken);
+        assertEquals(200, reviewDetail.statusCode());
+        assertEquals("POSITIVE", objectMapper.readTree(reviewDetail.body()).path("sentiment").asString());
+
+        JsonNode pendingQueue = objectMapper.readTree(
+                request("GET", "/admin/reviews?status=pending", null, adminToken).body()).path("content");
+        JsonNode queuedEditableReview = null;
+        for (int i = 0; i < pendingQueue.size(); i++) {
+            if (pendingQueue.get(i).path("reviewId").asLong() == editableReview.getReviewId()) {
+                queuedEditableReview = pendingQueue.get(i);
+            }
+        }
+        assertNotNull(queuedEditableReview);
+        assertEquals("POSITIVE", queuedEditableReview.path("sentiment").asString());
+
+        storedEditableReview.moderate(ReviewStatus.APPROVED);
+        reviewRepository.saveAndFlush(storedEditableReview);
+        saveReview(workspace, ReviewStatus.APPROVED, ReviewSentiment.POSITIVE);
+        saveReview(workspace, ReviewStatus.APPROVED, ReviewSentiment.NEUTRAL);
+        Review negativeReview = saveReview(workspace, ReviewStatus.APPROVED, ReviewSentiment.NEGATIVE);
+        saveReview(workspace, ReviewStatus.APPROVED, ReviewSentiment.NEGATIVE);
+        Review nullSentimentReview = saveReview(workspace, ReviewStatus.APPROVED, null);
+        Review rejectedReview = saveReview(workspace, ReviewStatus.REJECTED, null);
+
+        JsonNode nullSentimentDetail = objectMapper.readTree(
+                request("GET", "/admin/reviews/" + nullSentimentReview.getReviewId(), null, adminToken).body());
+        assertTrue(nullSentimentDetail.path("sentiment").isNull());
+
+        assertEquals(200, request("PATCH", "/admin/reviews/" + rejectedReview.getReviewId() + "/sentiment",
+                "{\"sentiment\":\"NEGATIVE\"}", adminToken).statusCode());
+
+        JsonNode tieDetail = objectMapper.readTree(request("GET", "/workspaces/" + workspaceId, null, null).body());
+        assertEquals(2, tieDetail.path("reviewSentimentStats").path("positiveCount").asInt());
+        assertEquals(1, tieDetail.path("reviewSentimentStats").path("neutralCount").asInt());
+        assertEquals(2, tieDetail.path("reviewSentimentStats").path("negativeCount").asInt());
+        assertEquals(40, tieDetail.path("reviewSentimentStats").path("positiveRate").asInt());
+        assertEquals(20, tieDetail.path("reviewSentimentStats").path("neutralRate").asInt());
+        assertEquals(40, tieDetail.path("reviewSentimentStats").path("negativeRate").asInt());
+        assertTrue(tieDetail.path("dominantReviewSentiment").isNull());
+
+        assertEquals(200, request("PATCH", "/admin/reviews/" + negativeReview.getReviewId() + "/sentiment",
+                "{\"sentiment\":\"POSITIVE\"}", adminToken).statusCode());
+        assertEquals(200, request("POST", "/workspaces/" + workspaceId + "/clean-score/recalculate", null, adminToken).statusCode());
+
+        JsonNode summary = objectMapper.readTree(request("GET", "/workspaces/" + workspaceId + "/summary", null, null).body());
+        assertEquals(3, summary.path("reviewSentimentStats").path("positiveCount").asInt());
+        assertEquals(60, summary.path("reviewSentimentStats").path("positiveRate").asInt());
+        assertEquals("POSITIVE", summary.path("dominantReviewSentiment").asString());
+        JsonNode list = objectMapper.readTree(request("GET", "/workspaces?keyword=sentiment-stats-workspace", null, null).body());
+        assertEquals("POSITIVE", list.get(0).path("dominantReviewSentiment").asString());
+
+        HttpResponse<String> emptyWorkspaceCreated = request("POST", "/workspaces", """
+                {
+                  "name": "empty-sentiment-workspace",
+                  "address": "광주광역시 북구 분위기로 2",
+                  "category": "카페",
+                  "district": "전대후문",
+                  "latitude": 35.2200000,
+                  "longitude": 126.2200000
+                }
+                """, adminToken);
+        long emptyWorkspaceId = objectMapper.readTree(emptyWorkspaceCreated.body()).path("workspaceId").asLong();
+        JsonNode emptyDetail = objectMapper.readTree(request("GET", "/workspaces/" + emptyWorkspaceId, null, null).body());
+        assertEquals(0, emptyDetail.path("reviewSentimentStats").path("positiveCount").asInt());
+        assertEquals(0, emptyDetail.path("reviewSentimentStats").path("neutralRate").asInt());
+        assertTrue(emptyDetail.path("dominantReviewSentiment").isNull());
+    }
+
+    @Test
     void authAliasesValidateInputAndBlacklistLoggedOutToken() throws Exception {
         // Given: a valid user token
         String token = jwtUtil.generateToken("logout@example.com", 2L);
@@ -432,6 +554,19 @@ class PlannedApiIntegrationTest {
     private void assertUtcTimestamp(String timestamp) {
         assertTrue(timestamp.endsWith("Z"));
         assertEquals(ZoneOffset.UTC, OffsetDateTime.parse(timestamp).getOffset());
+    }
+
+    private Review saveReview(Workspace workspace, ReviewStatus status, ReviewSentiment sentiment) {
+        Review review = new Review(workspace, reviewRequest("sentiment review"), "kakao:2");
+        review.updateSentiment(sentiment);
+        review.moderate(status);
+        return reviewRepository.saveAndFlush(review);
+    }
+
+    private ReviewCreateRequest reviewRequest(String content) {
+        return new ReviewCreateRequest(
+                false, false, false, false, false, false, false, false, 0, content
+        );
     }
 
     private HttpResponse<String> multipart(

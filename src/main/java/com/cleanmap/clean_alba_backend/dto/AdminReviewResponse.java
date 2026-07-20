@@ -1,6 +1,7 @@
 package com.cleanmap.clean_alba_backend.dto;
 
 import com.cleanmap.clean_alba_backend.domain.Review;
+import com.cleanmap.clean_alba_backend.domain.ReviewSentiment;
 import com.cleanmap.clean_alba_backend.domain.ReviewStatus;
 
 import java.time.OffsetDateTime;
@@ -25,6 +26,7 @@ public record AdminReviewResponse(
         boolean overtimePayViolation,
         Integer coworkerCount,
         String content,
+        ReviewSentiment sentiment,
         ReviewStatus status,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
@@ -65,6 +67,7 @@ public record AdminReviewResponse(
                 review.isOvertimePayViolation(),
                 review.getCoworkerCount(),
                 review.getContent(),
+                review.getSentiment(),
                 review.getStatus(),
                 review.getCreatedAt().atOffset(ZoneOffset.UTC),
                 review.getUpdatedAt().atOffset(ZoneOffset.UTC),
