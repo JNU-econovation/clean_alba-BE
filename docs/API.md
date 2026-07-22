@@ -459,7 +459,7 @@ Upstage Solar가 자연어를 검색 조건으로 변환하고, 실제 검색은
 
 `POST /reviews/purity-preview` · USER
 
-Upstage Solar `solar-pro` 모델로 법적 위험도를 평가하고 뉘앙스가 다른 순화 후보 3개를 반환한다. 결과를 자동 저장하지 않는다.
+Upstage Solar Pro 2 `solar-pro2` 모델로 법적 위험도를 평가하고 뉘앙스가 다른 순화 후보 3개를 반환한다. 결과를 자동 저장하지 않는다.
 
 **Request**
 

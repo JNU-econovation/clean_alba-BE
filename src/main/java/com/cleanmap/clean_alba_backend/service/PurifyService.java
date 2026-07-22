@@ -13,14 +13,14 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 
-// 알바 후기를 Upstage Solar(solar-pro)로 법적으로 안전하게 순화한다.
+// 알바 후기를 Upstage Solar Pro 2(solar-pro2)로 법적으로 안전하게 순화한다.
 // 원문 텍스트 → 리스크 평가 + 뉘앙스가 다른 3가지 순화 버전(JSON) 반환.
 @Service
 @RequiredArgsConstructor
 public class PurifyService {
 
     private static final String SOLAR_URL = "https://api.upstage.ai/v1/chat/completions";
-    private static final String MODEL = "solar-pro";
+    private static final String MODEL = "solar-pro2";
 
     // 후기 법적 순화 규칙. (JNU-Upstage-Skillthon review-purify-skill 프롬프트 이식)
     private static final String SYSTEM_PROMPT = """

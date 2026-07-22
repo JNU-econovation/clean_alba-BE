@@ -20,7 +20,7 @@ import java.util.Map;
 public class NaturalLanguageQueryParser {
 
     private static final String SOLAR_URL = "https://api.upstage.ai/v1/chat/completions";
-    private static final String MODEL = "solar-pro";
+    private static final String MODEL = "solar-pro2";
 
     private static final String SYSTEM_PROMPT = """
             당신은 아르바이트 사업장 검색어 해석기입니다.
